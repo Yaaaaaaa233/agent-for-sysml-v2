@@ -1,0 +1,32 @@
+# sysml-modeling-agent —— MCP 工具服务依赖
+#
+# 安装：
+#     python -m pip install -r requirements.txt
+#
+# 全部为可选依赖：核心逻辑（校验 / 渲染 / 查询 / 回验）用纯标准库实现，
+# 一个都不装也能跑——此时 run_server.py 自动切到「本地调用模式」
+# （--list-tools / --call），工具功能完全一致，只是没有 MCP 协议外壳。
+#
+# 版本区间依据 2026-10-17 的实测环境（见 docs/probe-mcp-http/EVIDENCE.txt）：
+#     fastmcp 4.1.0 · mcp 2.3.0 · uvicorn 0.54.0 · jsonschema 4.26.0 · Python 3.11.6
+# 给了上界是为了部署可复现——避免某天 pip 拉到一个改了中间件/传输接口、
+# 让服务起不来的大版本（本项目已经因为框架接口不一致踩过两次，见 run_server.py 注释）。
+
+# ---- MCP 服务端框架（二选一即可，run_server.py 按此顺序尝试） ----
+# 首选：装饰器式注册，最省事（技术方案 5.4 的选型）。已实测支持
+#   initialize / tools/list / tools/call 与 Streamable HTTP。
+fastmcp>=2.0,<5
+# 官方 MCP Python SDK。注意：**mcp 2.x 已把 FastMCP 改名为 MCPServer**
+# （mcp.server.fastmcp 不再存在），所以它在本项目里只是 fastmcp 装不上时的退路，
+# 且需要适配层；实测环境里 fastmcp 优先，不走这条路。
+mcp>=1.2,<3
+
+# ---- HTTP 传输（streamable-http 模式需要） ----
+# fastmcp 会自带 uvicorn；这里显式列出是为了**鉴权**这条路径：
+# run_server.py 自己起 uvicorn 并自己包 Bearer 中间件（不依赖框架的中间件接口）。
+uvicorn>=0.27,<1
+
+# ---- 第二层校验：JSON Schema 交叉检查（可选） ----
+# 不装时 validate_model_json 自动降级为纯标准库规则引擎，功能不减，
+# 只是返回的 schemaLayer 会是 "unavailable"。
+jsonschema>=4.0,<5

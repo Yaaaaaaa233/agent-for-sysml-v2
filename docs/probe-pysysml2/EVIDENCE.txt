@@ -1,0 +1,25 @@
+# PySysML2 实测原始输出（2026-10-17，macOS / Python 3.11.6）
+# 环境：python3 -m venv /tmp/pys2venv && pip install "git+https://github.com/DAF-Digital-Transformation-Office/PySysML2"
+# 复现：/tmp/pys2venv/bin/python parse_probe.py <file.sysml>
+# 注：pysysml2 CLI 因 typer 0.7.0 与 click 8.5.0 不兼容而不可用（TypeError: TyperArgument.make_metavar()），故直连其 ANTLR 生成代码。
+
+$ python parse_probe.py a_partonly.sysml
+--- a_partonly.sysml: syntax_errors=1
+    line 3:36 no viable alternative at input 'attributecapacityWh:Real='
+    parse tree: (model (element (namespace (sysml2_package package Demo { (namespace (part (part_def part def Battery { part_blk (part_blk attribute capacityWh : Real = 1000.0 ;) }))) (namespace (port (port_blk (feat
+
+$ python parse_probe.py b_req.sysml
+--- b_req.sysml: syntax_errors=2
+    line 2:4 mismatched input 'requirement' expecting {'}', 'actor', 'attribute', 'comment', 'connect', 'doc', 'item', 'package', 'part', 'port', 'ref', 'use', 'in', 'out', COMMENT_LONG}
+    line 4:43 no viable alternative at input 'attributeminEnduranceHours:Real='
+    parse tree: (model (element (namespace (sysml2_package package Demo { requirement def CruiseEndurance {))) (element (namespace (doc (doc_unnamed doc /* cruise time >= 4 h */)))) element (element attribute minEndu
+
+$ python parse_probe.py c_bad.sysml
+--- c_bad.sysml: syntax_errors=1
+    line 3:36 no viable alternative at input 'attributecapacityWh:Real='
+    parse tree: (model (element (namespace (sysml2_package package Demo { (namespace (part (part_def part def Battery { part_blk (part_blk attribute capacityWh : Real = 1000.0 ;)))) <missing '}'>))) <EOF>)
+
+$ python parse_probe.py d_gap.sysml
+--- d_gap.sysml: syntax_errors=0
+    parse tree: (model (element (namespace (sysml2_package package Gap { (namespace (part (part_def part def Battery { (part_blk (feature (feature_attribute_def attribute capacityWh : Real ;))) (part_blk (feature (fe
+

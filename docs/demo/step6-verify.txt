@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "counts": {
+    "irElements": 5,
+    "textDeclarations": 10,
+    "matched": 5,
+    "missing": 0,
+    "extra": 0,
+    "mismatched": 0,
+    "lintErrors": 0
+  },
+  "lint": {
+    "lines": 41,
+    "chars": 1610,
+    "errors": 0,
+    "warnings": 0
+  },
+  "missing": [],
+  "extra": [],
+  "mismatched": [],
+  "declarationsByKind": {
+    "Package": 1,
+    "PartDefinition": 1,
+    "PartUsage": 1,
+    "Requirement": 2,
+    "Attribute": 4,
+    "ActionDefinition": 1
+  }
+}

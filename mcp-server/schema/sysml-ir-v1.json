@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sysml-ir/v1",
+  "title": "SysML v2 IR (Intermediate Representation) Schema v1",
+  "description": "LLM 只填这张表（IR JSON），确定性代码据它校验并渲染出 SysML v2 文本。对应《SysML建模智能体技术方案》4.2 统一元素骨架 + 4.3 MVP 元素清单（6 种 kind、5 种 relations[].type）。",
+  "type": "object",
+  "required": ["schema", "package", "elements"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "description": "Schema 版本号，固定值，不允许自创。",
+      "const": "sysml-ir/v1"
+    },
+    "package": {
+      "description": "顶层 package 名，同时充当元素 owner 的合法取值之一（owner 可以是 package 名或某个元素的 id）。",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "elements": {
+      "description": "模型元素列表。id 全局唯一；同 owner 下 name 唯一。",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/element" }
+    },
+    "meta": {
+      "description": "可选的项目元信息，不参与渲染。",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "source": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    }
+  },
+
+  "$defs": {
+    "identifier": {
+      "description": "建模语言里的标识符（name / states / 动作端口名）：^[A-Za-z_][A-Za-z0-9_]*$，不许连字符，因为它要直接落进 SysML v2 文本。",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "minLength": 1
+    },
+
+    "elementId": {
+      "description": "IR 内部的键（id / owner / relations[].target / PartUsage.typeRef）：^[A-Za-z_][A-Za-z0-9_-]*$。允许连字符——方案 2.3 的示例形如 REQ-CRUISE-ENDURANCE；它只活在 JSON 与追溯注释里，不当 SysML 标识符用。",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+      "minLength": 1
+    },
+
+    "relation": {
+      "description": "关系项。type 受控枚举；target 必须是模型内已存在的元素 id；rationale 为必填的理由说明。",
+      "type": "object",
+      "required": ["type", "target", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["refines", "satisfiedBy", "decomposes", "verifies", "connects"]
+        },
+        "target": { "$ref": "#/$defs/elementId" },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "element": {
+      "description": "所有元素共用的骨架字段。",
+      "type": "object",
+      "required": ["id", "kind", "name", "owner", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "kind": {
+          "description": "受控枚举，只允许元模型子集内的值。",
+          "enum": [
+            "PartDefinition",
+            "PartUsage",
+            "Requirement",
+            "ActionDefinition",
+            "StateDefinition",
+            "Attribute"
+          ]
+        },
+        "name": { "$ref": "#/$defs/identifier" },
+        "owner": { "$ref": "#/$defs/elementId" },
+        "properties": { "type": "object" },
+        "relations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/relation" }
+        }
+      },
+
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "PartDefinition" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsPartDefinition" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "PartUsage" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsPartUsage" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "Requirement" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsRequirement" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "ActionDefinition" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsActionDefinition" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "StateDefinition" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsStateDefinition" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "Attribute" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsAttribute" } } }
+        }
+      ]
+    },
+
+    "propsPartDefinition": {
+      "description": "PartDefinition：结构定义（如 Battery、Motor、Propeller）。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string" },
+        "isAbstract": { "type": "boolean" }
+      }
+    },
+
+    "propsPartUsage": {
+      "description": "PartUsage：某个 PartDefinition 的一次具体使用，必须给出 typeRef。",
+      "type": "object",
+      "required": ["typeRef"],
+      "additionalProperties": false,
+      "properties": {
+        "typeRef": {
+          "description": "必须指向模型内某个 kind=PartDefinition 的元素 id。",
+          "$ref": "#/$defs/elementId"
+        },
+        "quantity": { "type": "number", "minimum": 0 },
+        "description": { "type": "string" }
+      }
+    },
+
+    "propsRequirement": {
+      "description": "Requirement：需求条目。text 与 acceptanceCriteria 必填。除保留字段外的自定义字段一律视为阈值/参数，必须是 number、boolean 或 {value, unit} 对象——不允许把 \"4 小时\" 整体写成字符串。",
+      "type": "object",
+      "required": ["text", "acceptanceCriteria"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "acceptanceCriteria": { "type": "string", "minLength": 1 },
+        "verifyMethod": {
+          "enum": ["analysis", "inspection", "test", "simulation", "demonstration", "review"]
+        },
+        "rationale": { "type": "string" },
+        "source": { "type": "string" },
+        "priority": { "enum": ["high", "medium", "low"] },
+        "description": { "type": "string" }
+      },
+      "patternProperties": {
+        "^(?!(text|acceptanceCriteria|verifyMethod|rationale|source|priority|description)$)[A-Za-z_][A-Za-z0-9_]*$": {
+          "oneOf": [
+            { "type": "number" },
+            { "type": "boolean" },
+            {
+              "type": "object",
+              "required": ["value", "unit"],
+              "additionalProperties": false,
+              "properties": {
+                "value": { "type": "number" },
+                "unit": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "propsActionDefinition": {
+      "description": "ActionDefinition：功能/动作定义，含输入输出。",
+      "type": "object",
+      "required": ["inputs", "outputs"],
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/identifier" },
+              "typeRef": { "type": "string" },
+              "unit": { "type": "string" }
+            }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/identifier" },
+              "typeRef": { "type": "string" },
+              "unit": { "type": "string" }
+            }
+          }
+        },
+        "description": { "type": "string" }
+      }
+    },
+
+    "propsStateDefinition": {
+      "description": "StateDefinition：状态机定义，含 states 与 transitions。",
+      "type": "object",
+      "required": ["states"],
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "initial": { "$ref": "#/$defs/identifier" },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "additionalProperties": false,
+            "properties": {
+              "from": { "$ref": "#/$defs/identifier" },
+              "to": { "$ref": "#/$defs/identifier" },
+              "trigger": { "type": "string" },
+              "guard": { "type": "string" }
+            }
+          }
+        },
+        "description": { "type": "string" }
+      }
+    },
+
+    "propsAttribute": {
+      "description": "Attribute：数值属性（参数），valueType 受控枚举，unit 单独成字段。",
+      "type": "object",
+      "required": ["valueType"],
+      "additionalProperties": false,
+      "properties": {
+        "valueType": { "enum": ["Real", "Integer", "Boolean", "String"] },
+        "defaultValue": { "type": ["number", "string", "boolean"] },
+        "unit": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "valueType": { "const": "Real" } }, "required": ["valueType"] },
+          "then": { "properties": { "defaultValue": { "type": "number" } } }
+        },
+        {
+          "if": { "properties": { "valueType": { "const": "Integer" } }, "required": ["valueType"] },
+          "then": { "properties": { "defaultValue": { "type": "integer" } } }
+        },
+        {
+          "if": { "properties": { "valueType": { "const": "Boolean" } }, "required": ["valueType"] },
+          "then": { "properties": { "defaultValue": { "type": "boolean" } } }
+        },
+        {
+          "if": { "properties": { "valueType": { "const": "String" } }, "required": ["valueType"] },
+          "then": { "properties": { "defaultValue": { "type": "string" } } }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,34 @@
+=== 第7步 validate_model_json —— 校验并读 warning ===
+
+$ python .venv/bin/python mcp-server/run_server.py --call validate_model_json --input docs/demo/run-cruise-endurance-4h/step2-revised.ir.json
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "code": "W-REQ-NO-VERIFY",
+      "element": "REQ-CRUISE-ENDURANCE",
+      "message": "该需求标注 verifyMethod=simulation，但尚未建立指向验证用例（仿真/试验）的 verifies 关系。",
+      "pointer": "/elements/4/properties/verifyMethod"
+    }
+  ],
+  "schemaLayer": "ok(+0)",
+  "counts": {
+    "errors": 0,
+    "warnings": 1
+  }
+}
+exit=0
+
+$ python .venv/bin/python mcp-server/run_server.py --call validate_model_json --input docs/demo/run-cruise-endurance-4h/step4-final.ir.json
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "schemaLayer": "ok(+0)",
+  "counts": {
+    "errors": 0,
+    "warnings": 0
+  }
+}
+exit=0

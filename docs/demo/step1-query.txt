@@ -1,0 +1,36 @@
+=== 查询现状（第 1 步 query_model） ===
+{
+  "ok": true,
+  "mode": "elements",
+  "package": "CoaxialOctoRotor",
+  "keyword": null,
+  "kind": null,
+  "count": 4,
+  "truncated": false,
+  "results": [
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "CoaxialOctoRotor"
+    },
+    {
+      "id": "PART-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "CoaxialOctoRotor"
+    },
+    {
+      "id": "PART-USAGE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "CoaxialOctoRotor"
+    },
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "owner": "CoaxialOctoRotor"
+    }
+  ]
+}

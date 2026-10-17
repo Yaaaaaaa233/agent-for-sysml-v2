@@ -1,0 +1,18 @@
+# 虚拟环境（install.sh 创建）
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# 本仓库的 IR 产物是可版本化的（要进 git）：*.ir.json / *.sysml 都不忽略。
+# 只忽略本地跑出来的临时目录
+.tmp-dsh-test/
+
+# macOS / 本机工具产物
+.DS_Store
+.archify/

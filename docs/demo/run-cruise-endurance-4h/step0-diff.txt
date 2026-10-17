@@ -1,0 +1,130 @@
+=== 变更集：step0-before.ir.json → step4-final.ir.json ===
+
+--- docs/demo/step0-before.ir.json	2026-10-17 01:09:40
++++ docs/demo/run-cruise-endurance-4h/step4-final.ir.json	2026-10-17 02:07:08
+@@ -42,8 +42,25 @@
+         "outputs": [ { "name": "enduranceHours", "typeRef": "Real", "unit": "h" } ]
+       },
+       "relations": [
+-        { "type": "verifies", "target": "REQ-MISSION-ENDURANCE", "rationale": "该仿真工况验证任务级续航" }
++        { "type": "verifies", "target": "REQ-MISSION-ENDURANCE", "rationale": "该仿真工况验证任务级续航" },
++        { "type": "verifies", "target": "REQ-CRUISE-ENDURANCE", "rationale": "同一仿真工况直接验证巡航续航指标" }
+       ]
++    },
++    {
++      "id": "REQ-CRUISE-ENDURANCE",
++      "kind": "Requirement",
++      "name": "CruiseEndurance",
++      "owner": "CoaxialOctoRotor",
++      "properties": {
++        "text": "巡航时间不低于 4 小时",
++        "acceptanceCriteria": "在巡航速度 v 与转速比 eta 的稳态工作点下，满电续航时间 T >= 4.0 h",
++        "verifyMethod": "simulation",
++        "minEnduranceHours": 4.0
++      },
++      "relations": [
++        { "type": "refines", "target": "REQ-MISSION-ENDURANCE", "rationale": "由任务级续航需求分解而来：巡航段是任务剖面中耗时最长的一段" },
++        { "type": "satisfiedBy", "target": "PART-POWER-CHAIN", "rationale": "由功率链（电池→电调→电机→桨）的设计参数保障" }
++      ]
+     }
+   ]
+ }
+
+=== 本次 step4-final vs 仓库存档 step4-final（同一请求的既有存档）===
+
+--- docs/demo/step4-final.ir.json	2026-10-17 01:09:47
++++ docs/demo/run-cruise-endurance-4h/step4-final.ir.json	2026-10-17 02:07:08
+@@ -14,11 +14,7 @@
+         "minMissionDurationHours": 5.0
+       },
+       "relations": [
+-        {
+-          "type": "satisfiedBy",
+-          "target": "PART-POWER-CHAIN",
+-          "rationale": "由功率链的整体能量效率保障"
+-        }
++        { "type": "satisfiedBy", "target": "PART-POWER-CHAIN", "rationale": "由功率链的整体能量效率保障" }
+       ]
+     },
+     {
+@@ -26,19 +22,14 @@
+       "kind": "PartDefinition",
+       "name": "PowerChain",
+       "owner": "CoaxialOctoRotor",
+-      "properties": {
+-        "description": "功率链：电池 → 电调 → 电机 → 桨。"
+-      }
++      "properties": { "description": "功率链：电池 → 电调 → 电机 → 桨。" }
+     },
+     {
+       "id": "PART-USAGE-POWER-CHAIN",
+       "kind": "PartUsage",
+       "name": "powerChain",
+       "owner": "CoaxialOctoRotor",
+-      "properties": {
+-        "typeRef": "PART-POWER-CHAIN",
+-        "quantity": 1
+-      }
++      "properties": { "typeRef": "PART-POWER-CHAIN", "quantity": 1 }
+     },
+     {
+       "id": "ACT-SIM-ENDURANCE",
+@@ -47,32 +38,12 @@
+       "owner": "CoaxialOctoRotor",
+       "properties": {
+         "description": "续航仿真工况。",
+-        "inputs": [
+-          {
+-            "name": "cruiseSpeed",
+-            "typeRef": "Real",
+-            "unit": "m/s"
+-          }
+-        ],
+-        "outputs": [
+-          {
+-            "name": "enduranceHours",
+-            "typeRef": "Real",
+-            "unit": "h"
+-          }
+-        ]
++        "inputs": [ { "name": "cruiseSpeed", "typeRef": "Real", "unit": "m/s" } ],
++        "outputs": [ { "name": "enduranceHours", "typeRef": "Real", "unit": "h" } ]
+       },
+       "relations": [
+-        {
+-          "type": "verifies",
+-          "target": "REQ-MISSION-ENDURANCE",
+-          "rationale": "该仿真工况验证任务级续航"
+-        },
+-        {
+-          "type": "verifies",
+-          "target": "REQ-CRUISE-ENDURANCE",
+-          "rationale": "同一仿真工况直接验证巡航续航指标"
+-        }
++        { "type": "verifies", "target": "REQ-MISSION-ENDURANCE", "rationale": "该仿真工况验证任务级续航" },
++        { "type": "verifies", "target": "REQ-CRUISE-ENDURANCE", "rationale": "同一仿真工况直接验证巡航续航指标" }
+       ]
+     },
+     {
+@@ -87,17 +58,9 @@
+         "minEnduranceHours": 4.0
+       },
+       "relations": [
+-        {
+-          "type": "refines",
+-          "target": "REQ-MISSION-ENDURANCE",
+-          "rationale": "由任务级续航需求分解而来"
+-        },
+-        {
+-          "type": "satisfiedBy",
+-          "target": "PART-POWER-CHAIN",
+-          "rationale": "由功率链（电池→电调→电机→桨）的设计参数保障"
+-        }
++        { "type": "refines", "target": "REQ-MISSION-ENDURANCE", "rationale": "由任务级续航需求分解而来：巡航段是任务剖面中耗时最长的一段" },
++        { "type": "satisfiedBy", "target": "PART-POWER-CHAIN", "rationale": "由功率链（电池→电调→电机→桨）的设计参数保障" }
+       ]
+     }
+   ]
+-}
+\ No newline at end of file
++}

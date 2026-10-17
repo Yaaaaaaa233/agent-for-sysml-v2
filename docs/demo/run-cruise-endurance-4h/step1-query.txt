@@ -1,0 +1,163 @@
+=== 第1步/第2步 query_model 查现状（输入：docs/demo/step0-before.ir.json）===
+
+$ query_model(keyword=null)  —— 现有元素清单
+{
+  "ok": true,
+  "mode": "elements",
+  "package": "CoaxialOctoRotor",
+  "keyword": null,
+  "kind": null,
+  "count": 4,
+  "truncated": false,
+  "results": [
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "CoaxialOctoRotor"
+    },
+    {
+      "id": "PART-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "CoaxialOctoRotor"
+    },
+    {
+      "id": "PART-USAGE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "CoaxialOctoRotor"
+    },
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "owner": "CoaxialOctoRotor"
+    }
+  ]
+}
+
+$ query_model(keyword="endurance")  —— 是否已有同等/同类续航元素
+{
+  "ok": true,
+  "mode": "elements",
+  "package": "CoaxialOctoRotor",
+  "keyword": "endurance",
+  "kind": null,
+  "count": 2,
+  "truncated": false,
+  "results": [
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "CoaxialOctoRotor",
+      "matched": [
+        "id",
+        "name",
+        "properties",
+        "relations"
+      ]
+    },
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "owner": "CoaxialOctoRotor",
+      "matched": [
+        "id",
+        "name"
+      ]
+    }
+  ]
+}
+
+$ query_model(keyword="REQ-CRUISE-ENDURANCE")  —— 拟用 id 是否被占用
+{
+  "ok": true,
+  "mode": "elements",
+  "package": "CoaxialOctoRotor",
+  "keyword": "REQ-CRUISE-ENDURANCE",
+  "kind": null,
+  "count": 0,
+  "truncated": false,
+  "results": []
+}
+
+$ query_model(duplicates=true, unsatisfied_requirements=true)  —— 重名 / 无人满足的需求
+{
+  "ok": true,
+  "mode": "duplicates",
+  "count": 0,
+  "truncated": false,
+  "duplicateIds": [],
+  "duplicateNames": [],
+  "results": []
+}
+
+$ query_model(referrers_of="REQ-MISSION-ENDURANCE")
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "REQ-MISSION-ENDURANCE",
+  "targetExists": true,
+  "count": 1,
+  "truncated": false,
+  "results": [
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "via": "relations.verifies",
+      "rationale": "该仿真工况验证任务级续航"
+    }
+  ]
+}
+
+$ query_model(referrers_of="PART-POWER-CHAIN")
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "PART-POWER-CHAIN",
+  "targetExists": true,
+  "count": 2,
+  "truncated": false,
+  "results": [
+    {
+      "id": "PART-USAGE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "via": "properties.typeRef",
+      "rationale": null
+    },
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "via": "relations.satisfiedBy",
+      "rationale": "由功率链的整体能量效率保障"
+    }
+  ]
+}
+
+$ query_model(referrers_of="ACT-SIM-ENDURANCE")
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "ACT-SIM-ENDURANCE",
+  "targetExists": true,
+  "count": 0,
+  "truncated": false,
+  "results": []
+}
+
+$ query_model(referrers_of="PART-USAGE-POWER-CHAIN")
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "PART-USAGE-POWER-CHAIN",
+  "targetExists": true,
+  "count": 0,
+  "truncated": false,
+  "results": []
+}

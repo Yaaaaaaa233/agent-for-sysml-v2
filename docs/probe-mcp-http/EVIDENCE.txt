@@ -1,0 +1,30 @@
+# MCP Streamable HTTP 实测原始输出（2026-10-17）
+# 环境：/tmp/mcpvenv（fastmcp 4.1.0 + mcp 2.3.0 + uvicorn 0.54.0），Python 3.11.6
+# 服务端：python run_server.py --transport streamable-http --port 8769 --auth-token testtok123
+# 复现：python docs/probe-mcp-http/probe_mcp_http.py --url http://127.0.0.1:8769/mcp --token testtok123 --ir docs/demo/step4-final.ir.json
+
+== MCP Streamable HTTP 探针 ==
+   url   : http://127.0.0.1:8769/mcp
+   token : 已提供
+
+1) 鉴权
+  [OK  ] 无 Authorization 头被拒绝  -> HTTP 401
+  [OK  ] 错误 token 被拒绝  -> HTTP 401
+  [OK  ] 超集 token 不被前缀匹配接受  -> HTTP 401
+
+2) MCP initialize
+  [OK  ] initialize 成功  -> HTTP 200
+  [OK  ] serverInfo.name 正确  -> {"name": "sysml-modeling-agent", "version": "1.0.0"}
+  [OK  ] 拿到 mcp-session-id  -> 57f8fdfb091148c2a1120a291d6d4583
+
+3) tools/list
+  [OK  ] 四个工具都注册了  -> ['validate_model_json', 'generate_sysml', 'query_model', 'verify_sysml']
+
+4) tools/call
+  [OK  ] validate_model_json ok  -> errors=0 warnings=0
+  [OK  ] generate_sysml ok  -> sha256=32e23d5e14bb8e1e
+  [OK  ] query_model ok  -> 未被满足的需求=0
+  [OK  ] verify_sysml ok  -> {"irElements": 5, "textDeclarations": 10, "matched": 5, "missing": 0, "extra": 0, "mismatched": 0, "lintErrors": 0}
+
+== 全部符合预期 ==
+EXIT=0

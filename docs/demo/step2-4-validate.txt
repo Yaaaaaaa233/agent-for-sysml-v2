@@ -1,0 +1,30 @@
+$ python3 mcp-server/run_server.py --call validate_model_json --input docs/demo/step2-revised.ir.json
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    {
+      "code": "W-REQ-NO-VERIFY",
+      "element": "REQ-CRUISE-ENDURANCE",
+      "message": "该需求标注 verifyMethod=simulation，但尚未建立指向验证用例（仿真/试验）的 verifies 关系。",
+      "pointer": "/elements/4/properties/verifyMethod"
+    }
+  ],
+  "schemaLayer": "unavailable",
+  "counts": {
+    "errors": 0,
+    "warnings": 1
+  }
+}
+
+$ python3 mcp-server/run_server.py --call validate_model_json --input docs/demo/step4-final.ir.json
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "schemaLayer": "unavailable",
+  "counts": {
+    "errors": 0,
+    "warnings": 0
+  }
+}

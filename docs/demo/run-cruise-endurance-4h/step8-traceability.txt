@@ -1,0 +1,110 @@
+=== 第8步 追溯检查（输入：docs/demo/run-cruise-endurance-4h/step4-final.ir.json）===
+
+$ query_model(unsatisfied_requirements=true)  —— 有没有「没人满足」的需求
+{
+  "ok": true,
+  "mode": "unsatisfiedRequirements",
+  "count": 0,
+  "truncated": false,
+  "results": []
+}
+
+$ query_model(duplicates=true)  —— 再确认一次没有重名/重复 id
+{
+  "ok": true,
+  "mode": "duplicates",
+  "count": 0,
+  "truncated": false,
+  "duplicateIds": [],
+  "duplicateNames": [],
+  "results": []
+}
+
+$ query_model(referrers_of="REQ-CRUISE-ENDURANCE")  —— 谁引用了它（验证链/满足链是否闭合）
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "REQ-CRUISE-ENDURANCE",
+  "targetExists": true,
+  "count": 1,
+  "truncated": false,
+  "results": [
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "via": "relations.verifies",
+      "rationale": "同一仿真工况直接验证巡航续航指标"
+    }
+  ]
+}
+
+$ query_model(referrers_of="REQ-MISSION-ENDURANCE")  —— 谁引用了它（验证链/满足链是否闭合）
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "REQ-MISSION-ENDURANCE",
+  "targetExists": true,
+  "count": 2,
+  "truncated": false,
+  "results": [
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "via": "relations.verifies",
+      "rationale": "该仿真工况验证任务级续航"
+    },
+    {
+      "id": "REQ-CRUISE-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "via": "relations.refines",
+      "rationale": "由任务级续航需求分解而来：巡航段是任务剖面中耗时最长的一段"
+    }
+  ]
+}
+
+$ query_model(referrers_of="PART-POWER-CHAIN")  —— 谁引用了它（验证链/满足链是否闭合）
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "PART-POWER-CHAIN",
+  "targetExists": true,
+  "count": 3,
+  "truncated": false,
+  "results": [
+    {
+      "id": "PART-USAGE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "via": "properties.typeRef",
+      "rationale": null
+    },
+    {
+      "id": "REQ-CRUISE-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "via": "relations.satisfiedBy",
+      "rationale": "由功率链（电池→电调→电机→桨）的设计参数保障"
+    },
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "via": "relations.satisfiedBy",
+      "rationale": "由功率链的整体能量效率保障"
+    }
+  ]
+}
+
+$ query_model(referrers_of="ACT-SIM-ENDURANCE")  —— 谁引用了它（验证链/满足链是否闭合）
+{
+  "ok": true,
+  "mode": "referrers",
+  "target": "ACT-SIM-ENDURANCE",
+  "targetExists": true,
+  "count": 0,
+  "truncated": false,
+  "results": []
+}

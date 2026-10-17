@@ -1,0 +1,8 @@
+$ /tmp/pys2venv/bin/python parse_probe.py demo.sysml   # PySysML2（T0 候选 B）
+--- /tmp/pys2probe/demo.sysml: syntax_errors=5
+    line 13:4 extraneous input 'requirement' expecting {'}', 'actor', 'attribute', 'comment', 'connect', 'doc', 'item', 'package', 'part', 'port', 'ref', 'use', 'in', 'out', COMMENT_LONG}
+    line 16:40 mismatched input '=' expecting ';'
+    line 17:43 mismatched input '=' expecting ';'
+    line 22:4 extraneous input 'requirement' expecting {<EOF>, 'actor', 'attribute', 'comment', 'connect', 'doc', 'import', 'item', 'package', 'part', 'port', 'ref', 'use', 'in', 'out', COMMENT_LONG}
+    line 25:40 no viable alternative at input 'attributeverifyMethod:String='
+    parse tree: (model (element (namespace (sysml2_package package CoaxialOctoRotor { (namespace (part (part_def part def PowerChain ;))) (namespace (port (port_blk (feature (feature_part_specializes part powerChain 

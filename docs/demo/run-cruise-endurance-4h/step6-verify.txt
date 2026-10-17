@@ -1,0 +1,59 @@
+=== 第9步 verify_sysml —— 回验（内置 lint + 声明抽取 + 与 IR 元素级比对）===
+
+$ verify_sysml(text=step5-generated.sysml, model=step4-final.ir.json)
+{
+  "ok": true,
+  "lint": {
+    "ok": true,
+    "errors": [],
+    "warnings": [],
+    "stats": {
+      "lines": 41,
+      "chars": 1627,
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "missing": [],
+  "extra": [],
+  "mismatched": [],
+  "counts": {
+    "irElements": 5,
+    "textDeclarations": 10,
+    "matched": 5,
+    "missing": 0,
+    "extra": 0,
+    "mismatched": 0,
+    "lintErrors": 0
+  },
+  "declarationsByKind": {
+    "Package": 1,
+    "PartDefinition": 1,
+    "PartUsage": 1,
+    "Requirement": 2,
+    "Attribute": 4,
+    "ActionDefinition": 1
+  }
+}
+exit=0
+
+=== 交叉校验：用本次工具链重跑仓库存档的 T6 产物，看是否逐字节复现 ===
+
+$ generate_sysml(docs/demo/step4-final.ir.json)  vs  存档 docs/demo/step5-generated.sysml
+存档记录的 sha256        : 32e23d5e14bb8e1e62e03cf82207c01a828dd02b1df0ab803f1492355e359e6c
+本次重跑 sha256          : 32e23d5e14bb8e1e62e03cf82207c01a828dd02b1df0ab803f1492355e359e6c
+与存档文本逐字节一致     : True
+存档 sha256 复算         : 32e23d5e14bb8e1e62e03cf82207c01a828dd02b1df0ab803f1492355e359e6c
+
+=== 本次产物 vs 存档产物：逐行差异（应只有我选择的 rationale 措辞）===
+--- docs/demo/step5-generated.sysml	2026-10-17 01:09:58
++++ docs/demo/run-cruise-endurance-4h/step5-generated.sysml	2026-10-17 02:07:38
+@@ -16,7 +16,7 @@
+         attribute verifyMethod : String = "simulation";
+         attribute minEnduranceHours : Real = 4.0;
+         // 追溯关系 (relations):
+-        //   REQ-CRUISE-ENDURANCE --refines--> REQ-MISSION-ENDURANCE  (由任务级续航需求分解而来)
++        //   REQ-CRUISE-ENDURANCE --refines--> REQ-MISSION-ENDURANCE  (由任务级续航需求分解而来：巡航段是任务剖面中耗时最长的一段)
+         //   REQ-CRUISE-ENDURANCE --satisfiedBy--> PART-POWER-CHAIN  (由功率链（电池→电调→电机→桨）的设计参数保障)
+     }
+     requirement def MissionEndurance {

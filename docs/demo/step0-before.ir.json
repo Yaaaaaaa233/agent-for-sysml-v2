@@ -1,0 +1,49 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "CoaxialOctoRotor",
+  "elements": [
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "text": "任务级续航：共轴八旋翼须按指定任务剖面完成起飞、巡航与安全返航。",
+        "acceptanceCriteria": "在标称任务剖面下，全程可用飞行时间 T_mission >= 5.0 h。",
+        "verifyMethod": "simulation",
+        "minMissionDurationHours": 5.0
+      },
+      "relations": [
+        { "type": "satisfiedBy", "target": "PART-POWER-CHAIN", "rationale": "由功率链的整体能量效率保障" }
+      ]
+    },
+    {
+      "id": "PART-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "CoaxialOctoRotor",
+      "properties": { "description": "功率链：电池 → 电调 → 电机 → 桨。" }
+    },
+    {
+      "id": "PART-USAGE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "CoaxialOctoRotor",
+      "properties": { "typeRef": "PART-POWER-CHAIN", "quantity": 1 }
+    },
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "续航仿真工况。",
+        "inputs": [ { "name": "cruiseSpeed", "typeRef": "Real", "unit": "m/s" } ],
+        "outputs": [ { "name": "enduranceHours", "typeRef": "Real", "unit": "h" } ]
+      },
+      "relations": [
+        { "type": "verifies", "target": "REQ-MISSION-ENDURANCE", "rationale": "该仿真工况验证任务级续航" }
+      ]
+    }
+  ]
+}
