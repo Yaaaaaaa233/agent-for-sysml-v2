@@ -1,0 +1,81 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "ConstantDemo",
+  "meta": {
+    "title": "范例 5（先错后改·改前）：悬空引用 + 阈值写成字符串 + 把常量写成需求",
+    "note": "这份文件是**故意写错**的教学样本，validate 必须报错；不要把它当成可交付模型。所有数值均为占位值。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-BATTERY",
+      "kind": "PartDefinition",
+      "name": "BatteryPack",
+      "owner": "ConstantDemo",
+      "properties": {
+        "description": "动力锂电池包。"
+      }
+    },
+    {
+      "id": "PART-USE-BATTERY",
+      "kind": "PartUsage",
+      "name": "batteryPack",
+      "owner": "ConstantDemo",
+      "properties": {
+        "typeRef": "PART-DEF-BATTERY",
+        "quantity": 1
+      }
+    },
+    {
+      "id": "REQ-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "owner": "ConstantDemo",
+      "properties": {
+        "text": "巡航时间不低于 4 小时。",
+        "acceptanceCriteria": "满电续航 T >= 4.0 h（占位值）。",
+        "verifyMethod": "simulation",
+        "minEnduranceHours": "4 小时"
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "PART-DEF-MOTOR",
+          "rationale": "想指向电机，但电机这个元素只存在于脑子里，模型里没有。"
+        }
+      ]
+    },
+    {
+      "id": "REQ-NOMINAL-VOLTAGE",
+      "kind": "Requirement",
+      "name": "NominalVoltage24V",
+      "owner": "ConstantDemo",
+      "properties": {
+        "text": "额定电压 24 V。",
+        "acceptanceCriteria": "母线电压等于 24 V。",
+        "nominalVoltageV": 24.0
+      }
+    },
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "ConstantDemo",
+      "properties": {
+        "description": "续航仿真工况。",
+        "inputs": [
+          { "name": "cruiseSpeed", "typeRef": "Real", "unit": "m/s" }
+        ],
+        "outputs": [
+          { "name": "enduranceHours", "typeRef": "Real", "unit": "h" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-ENDURANCE",
+          "rationale": "用仿真验证续航阈值。"
+        }
+      ]
+    }
+  ]
+}

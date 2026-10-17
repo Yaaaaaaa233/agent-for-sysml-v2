@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "sysml-ir/v1",
   "title": "SysML v2 IR (Intermediate Representation) Schema v1",
-  "description": "LLM 只填这张表（IR JSON），确定性代码据它校验并渲染出 SysML v2 文本。对应《SysML建模智能体技术方案》4.2 统一元素骨架 + 4.3 MVP 元素清单（6 种 kind、5 种 relations[].type）。",
+  "description": "LLM 只填这张表（IR JSON），确定性代码据它校验并渲染出 SysML v2 文本。对应《SysML建模智能体技术方案》4.2 统一元素骨架 + 4.3 MVP 元素清单（8 种 kind、5 种 relations[].type）。v1 增补（2026-10-17）：在 v1 内向后兼容地新增 Constraint 与 Connection 两种 kind，schema 版本号不变。",
   "type": "object",
   "required": ["schema", "package", "elements"],
   "additionalProperties": false,
@@ -77,7 +77,9 @@
             "Requirement",
             "ActionDefinition",
             "StateDefinition",
-            "Attribute"
+            "Attribute",
+            "Constraint",
+            "Connection"
           ]
         },
         "name": { "$ref": "#/$defs/identifier" },
@@ -113,6 +115,14 @@
         {
           "if": { "properties": { "kind": { "const": "Attribute" } }, "required": ["kind"] },
           "then": { "properties": { "properties": { "$ref": "#/$defs/propsAttribute" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "Constraint" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsConstraint" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "Connection" } }, "required": ["kind"] },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/propsConnection" } } }
         }
       ]
     },
@@ -272,6 +282,50 @@
           "then": { "properties": { "defaultValue": { "type": "string" } } }
         }
       ]
+    },
+
+    "propsConstraint": {
+      "description": "Constraint：参数约束/公式（方案 4.3 第 7 行）。expression 是单行公式文本；parameters 至少 1 项，每项必须是模型内 kind=Attribute 的元素 id（引用完整性由 Python 语义层保证）。",
+      "type": "object",
+      "required": ["expression", "parameters"],
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "description": "单行公式文本，非空，禁止换行。",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]+$"
+        },
+        "parameters": {
+          "description": "参数的元素 id 数组，至少 1 项；每项必须引用 kind=Attribute 的元素。",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/elementId" }
+        },
+        "description": { "type": "string" }
+      }
+    },
+
+    "propsConnection": {
+      "description": "Connection：两个 PartUsage 之间的连接（方案 4.3 第 8 行）。两端必须是 PartUsage，且 owner 与 Connection 自身相同；三元组 (sourceRef, targetRef, flowKind) 全模型唯一（引用与唯一性由 Python 语义层保证）。",
+      "type": "object",
+      "required": ["sourceRef", "targetRef", "flowKind"],
+      "additionalProperties": false,
+      "properties": {
+        "sourceRef": {
+          "description": "连接起点，必须引用模型内 kind=PartUsage 的元素 id，且与 targetRef 不同。",
+          "$ref": "#/$defs/elementId"
+        },
+        "targetRef": {
+          "description": "连接终点，必须引用模型内 kind=PartUsage 的元素 id，且与 sourceRef 不同。",
+          "$ref": "#/$defs/elementId"
+        },
+        "flowKind": {
+          "description": "流动类型，受控枚举。",
+          "enum": ["electrical", "mechanical", "data", "thermal", "fluid", "generic"]
+        },
+        "description": { "type": "string" }
+      }
     }
   }
 }

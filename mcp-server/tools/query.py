@@ -10,22 +10,43 @@ MVP 支持四种查询（方案 9.1 的 T2）：
 3. 查重名（同 owner 下 name 重复、id 重复）
 4. 列未被满足的需求（没有 satisfiedBy 关系）
 
+输入有两种给法（**二选一**）：直接给 ``model``（IR JSON 对象/字符串），或给
+``path``（**服务端本机**的 IR JSON 文件路径）。后者来自试用反馈：客户端每次都把
+整份模型塞进请求很啰嗦。注意 ``path`` 只在服务端本机可用——云端部署应上传内容
+本身，而不是路径（容器里没有你这台机器上的文件）。
+
+``path`` 的目录边界由环境变量 ``SYSML_QUERY_ROOT`` 控制：**云端 / streamable-http
+部署应设置它**来限制数据目录，设置后 ``path`` 解析（含符号链接）必须落在该根目录
+之下（含根本身），否则报 ``E-QUERY-PATH-OUTSIDE-ROOT``；不设置时保持原有的「不限制」
+行为（本地脚本/单机使用）。
+
+``referrers_of`` 查的是**引用边**，口径见 ``query_model`` 的文档：``relations[].target``、
+``properties.typeRef``、``Constraint.properties.parameters``、``Connection`` 的
+``properties.sourceRef`` / ``targetRef``；``owner`` 归属链**不算**引用边。
+
 纯函数：入参与返回值都是 JSON 可序列化结构；不修改传入的模型。
+（按 ``path`` 读文件是唯一的 I/O，且只读。）
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from .validator import KINDS
+from .validator import KINDS, load_model
 
 DEFAULT_LIMIT = 200
 
+#: 可选的查询根目录环境变量：设置后 ``path`` 只能读该目录（含子目录）下的文件
+QUERY_ROOT_ENV = "SYSML_QUERY_ROOT"
+
 
 def query_model(
-    model: Any,
+    model: Any = None,
     *,
+    path: Optional[str] = None,
     keyword: Optional[str] = None,
     kind: Optional[str] = None,
     referrers_of: Optional[str] = None,
@@ -37,10 +58,16 @@ def query_model(
 ) -> Dict[str, Any]:
     """在 IR JSON 上做只读查询。
 
-    :param model: IR JSON（dict 或 JSON 字符串）
+    :param model: IR JSON（dict 或 JSON 字符串）；与 ``path`` 二选一
+    :param path: 服务端本地 IR JSON 文件路径；与 ``model`` 二选一。
+        仅服务端本机可用；云端 / streamable-http 部署应上传内容而非路径，
+        并设置环境变量 ``SYSML_QUERY_ROOT`` 限制数据目录。设置后路径（解析符号链接后）
+        必须落在该根目录之下（含根本身），否则报 ``E-QUERY-PATH-OUTSIDE-ROOT``
     :param keyword: 关键字；大小写不敏感地匹配 id / name / owner / kind 及 properties 文本
     :param kind: 按 kind 过滤（受控枚举之一）
-    :param referrers_of: 查「谁引用了这个 id」（含 relations 反向引用与 PartUsage.typeRef）
+    :param referrers_of: 查「谁引用了这个 id」。引用边口径：``relations[].target``、
+        ``properties.typeRef``、``Constraint.properties.parameters``（元素 id 数组）、
+        ``Connection.properties.sourceRef`` / ``targetRef``；``owner`` 归属链不算引用边
     :param duplicates: True 时汇报 id 重复与同 owner 下 name 重复
     :param unsatisfied_requirements: True 时列出没有 satisfiedBy 关系的需求
     :param details: True 时一并返回命中的完整元素
@@ -51,9 +78,9 @@ def query_model(
     if keyword is None and query is not None:
         keyword = query
 
-    model, error = _coerce(model)
+    model, error = _resolve_source(model, path)
     if error:
-        return {"ok": False, "mode": "error", "count": 0, "results": [], "error": error}
+        return _input_error(error, path)
 
     elements: List[Dict[str, Any]] = [
         e for e in (model.get("elements") or []) if isinstance(e, dict)
@@ -71,6 +98,135 @@ def query_model(
 
 
 # --------------------------------------------------------------------------------------
+
+
+def _input_error(error: str, path: Optional[str] = None) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {
+        "ok": False,
+        "mode": "error",
+        "count": 0,
+        "results": [],
+        "error": error,
+    }
+    if path is not None:
+        payload["path"] = path
+    return payload
+
+
+def _resolve_source(model: Any, path: Optional[str]) -> Tuple[Any, Optional[str]]:
+    """把 ``model`` / ``path`` 归一成一个模型对象；不满足二选一约束时报错。
+
+    ``path`` 只接受字符串；读取失败（不存在 / 不是 UTF-8 / 不是 JSON / 顶层不是
+    对象）一律转成错误文本，**不向调用方抛栈**——MCP 客户端要的是可读的原因。
+    """
+    if path is not None:
+        if model is not None:
+            return None, (
+                "`model` 与 `path` 只能二选一：直接给 IR JSON（model），"
+                "或给服务端本地文件路径（path）。"
+            )
+        if isinstance(path, os.PathLike):
+            path = os.fspath(path)
+        if not isinstance(path, str) or not path.strip():
+            return None, "`path` 必须是非空字符串（服务端本地 IR JSON 文件路径），实际为 %s。" % (
+                _type_name(path)
+            )
+        candidate: Any = None
+        try:
+            candidate = Path(path).expanduser()
+        except Exception as exc:  # noqa: BLE001 - 路径本身就是外部输入
+            return None, "无法解析 path `%s`：%s。" % (path, exc)
+        root_error = _check_query_root(candidate)
+        if root_error is not None:
+            return None, root_error
+        try:
+            loaded = load_model(candidate)
+        except FileNotFoundError:
+            return None, "path 指向的文件不存在：`%s`。" % _display_path(path, candidate)
+        except IsADirectoryError:
+            return None, "path 指向的是目录，不是 IR JSON 文件：`%s`。" % _display_path(
+                path, candidate
+            )
+        except UnicodeDecodeError as exc:
+            return None, "path 指向的文件不是 UTF-8 文本：`%s`（%s）。" % (
+                _display_path(path, candidate),
+                exc,
+            )
+        except OSError as exc:
+            return None, "读取 path `%s` 失败：%s。" % (_display_path(path, candidate), exc)
+        except ValueError as exc:
+            return None, "path `%s` 不是合法 JSON：%s。" % (_display_path(path, candidate), exc)
+        except Exception as exc:  # noqa: BLE001 - 输入来自外部文件，必须宽进严出
+            return None, "读取 path `%s` 失败：%s。" % (_display_path(path, candidate), exc)
+
+        if not isinstance(loaded, dict):
+            return None, "path `%s` 的顶层必须是 JSON 对象（IR 模型），实际为 %s。" % (
+                _display_path(path, candidate),
+                _type_name(loaded),
+            )
+        return loaded, None
+
+    if model is None:
+        return None, (
+            "缺少输入：必须提供 `model`（IR JSON）或 `path`（服务端本地 IR JSON 文件路径）之一。"
+        )
+    return _coerce(model)
+
+
+def _check_query_root(candidate: Any) -> Optional[str]:
+    """``SYSML_QUERY_ROOT`` 的目录边界检查；未设置时返回 None（不限制）。
+
+    比较前**两端都先解析符号链接**（``Path.resolve``）：根目录里的软链接若指向根外，
+    解析后落在根外 → 拒绝，避免用一条软链接绕过目录限制。根本身允许（``relative_to``
+    得到 ``.``），只是它通常是个目录，后面 ``load_model`` 会按「指向目录」报错。
+    """
+    raw = os.environ.get(QUERY_ROOT_ENV)
+    if raw is None or not str(raw).strip():
+        return None
+    root_text = str(raw).strip()
+    try:
+        root = Path(root_text).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        return "环境变量 %s=`%s` 无法解析为目录：%s（E-QUERY-PATH-ROOT-INVALID）。" % (
+            QUERY_ROOT_ENV,
+            root_text,
+            exc,
+        )
+    try:
+        resolved = Path(candidate).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError) as exc:
+        return "path `%s` 无法解析（可能是符号链接环）：%s（E-QUERY-PATH-OUTSIDE-ROOT）。" % (
+            candidate,
+            exc,
+        )
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        return (
+            "path `%s` 解析后是 `%s`，不在 %s=`%s` 允许的目录之下，拒绝读取"
+            "（E-QUERY-PATH-OUTSIDE-ROOT）。"
+        ) % (candidate, resolved, QUERY_ROOT_ENV, root)
+    return None
+
+
+def _display_path(raw: str, candidate: Any) -> str:
+    return str(candidate) if candidate is not None else raw
+
+
+def _type_name(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "object"
+    return type(value).__name__
 
 
 def _coerce(model: Any):
@@ -178,6 +334,37 @@ def _flatten(value: Any) -> List[str]:
     return []
 
 
+def _referrer_edges(element: Dict[str, Any], target: str) -> List[Tuple[str, Any]]:
+    """列出该元素指向 ``target`` 的引用边：``(via, rationale)``。
+
+    口径（与 ``query_model`` 文档一致）：
+
+    - ``relations[].target`` → ``relations.<type>``；
+    - ``properties.typeRef`` → ``properties.typeRef``（PartUsage 指向 PartDefinition）；
+    - ``Constraint.properties.parameters`` → ``properties.parameters``（元素 id 数组）；
+    - ``Connection.properties.sourceRef`` / ``targetRef`` → 同名 ``via``。
+
+    ``owner`` 归属链**不算**引用边：父子归属不等于「引用了它」，
+    否则每个元素的 owner 都会把整棵父链算成引用方，追溯结果会被噪声淹没。
+    """
+    edges: List[Tuple[str, Any]] = []
+    props = element.get("properties")
+    if isinstance(props, dict):
+        if props.get("typeRef") == target:
+            edges.append(("properties.typeRef", None))
+        parameters = props.get("parameters")
+        if isinstance(parameters, list) and target in parameters:
+            edges.append(("properties.parameters", None))
+        for field in ("sourceRef", "targetRef"):
+            if props.get(field) == target:
+                edges.append(("properties.%s" % field, None))
+    for relation in element.get("relations") or []:
+        if not isinstance(relation, dict) or relation.get("target") != target:
+            continue
+        edges.append(("relations.%s" % relation.get("type"), relation.get("rationale")))
+    return edges
+
+
 def _referrers(
     elements: List[Dict[str, Any]],
     target: str,
@@ -190,27 +377,14 @@ def _referrers(
     for element in sorted(elements, key=lambda e: str(e.get("id"))):
         if element.get("id") == target:
             continue
-        props = element.get("properties")
-        if isinstance(props, dict) and props.get("typeRef") == target:
+        for via, rationale in _referrer_edges(element, target):
             referrers.append(
                 {
                     "id": element.get("id"),
                     "kind": element.get("kind"),
                     "name": element.get("name"),
-                    "via": "properties.typeRef",
-                    "rationale": None,
-                }
-            )
-        for relation in element.get("relations") or []:
-            if not isinstance(relation, dict) or relation.get("target") != target:
-                continue
-            referrers.append(
-                {
-                    "id": element.get("id"),
-                    "kind": element.get("kind"),
-                    "name": element.get("name"),
-                    "via": "relations.%s" % relation.get("type"),
-                    "rationale": relation.get("rationale"),
+                    "via": via,
+                    "rationale": rationale,
                 }
             )
 

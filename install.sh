@@ -2,7 +2,7 @@
 # =============================================================================
 # sysml-modeling-agent —— 一键安装脚本
 #
-#   ./install.sh                 建 venv + 装依赖 + 把三份 skill 注册到 DSH
+#   ./install.sh                 建 venv + 装依赖 + 把 skills/ 下的全部 skill 注册到 DSH
 #   ./install.sh --copy          注册 skill 时用「复制」而不是「符号链接」
 #   ./install.sh --skills-only   只注册 skill，不建 venv、不装依赖
 #   ./install.sh --no-skills     只建 venv 装依赖，不碰 DSH skill 目录
@@ -40,6 +40,15 @@ venv_python() {
 }
 VENV_PY="$(venv_python)"
 
+# 发现 skills/*/SKILL.md（目录 bundle）。数量随仓库变化，不写死——
+# 新增 skill 后 ./install.sh 与 --print-config 自动跟着变。
+SKILL_NAMES=()
+for _dir in "${HERE}"/skills/*/; do
+  [ -f "${_dir}SKILL.md" ] || continue
+  SKILL_NAMES+=("$(basename "${_dir%/}")")
+done
+SKILL_COUNT="${#SKILL_NAMES[@]}"
+
 USE_COPY=0
 DO_SKILLS=1
 DO_VENV=1
@@ -47,7 +56,9 @@ PRINT_ONLY=0
 SKILLS_ONLY=0
 
 usage() {
-  sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  # 只打印文件头的注释块：从第 2 行的 ===== 分隔线开始，到与之配对的下一条 ===== 为止。
+  # （旧实现写死行号 2,40p，头注释变短后会把代码一起打出来——这里改成按内容定界。）
+  sed -n '2,/^# =====/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
@@ -167,11 +178,12 @@ if [ "${DO_SKILLS}" -eq 1 ] && [ "${PRINT_ONLY}" -eq 0 ]; then
   echo "      提示：DSH 会监视该目录，新增 skill 会在下一个模型步骤自动出现在 skill 目录中，无需重启。"
 else
   echo "[4/4] 跳过 skill 注册"
+  echo "      已发现 ${SKILL_COUNT} 份 skill（${SKILL_NAMES[*]}）"
   echo "      手工注册方式（DSH 用户级 skill 根目录，rank 400）："
   echo "        mkdir -p \"${SKILLS_DST}\""
-  echo "        ln -s \"${HERE}/skills/modeling-workflow\" \"${SKILLS_DST}/modeling-workflow\""
-  echo "        ln -s \"${HERE}/skills/element-choice\"   \"${SKILLS_DST}/element-choice\""
-  echo "        ln -s \"${HERE}/skills/anti-patterns\"    \"${SKILLS_DST}/anti-patterns\""
+  for _name in "${SKILL_NAMES[@]}"; do
+    printf '        ln -s "%s/skills/%s" "%s/%s"\n' "${HERE}" "${_name}" "${SKILLS_DST}" "${_name}"
+  done
   echo "      （Windows 无符号链接权限时改用复制：xcopy /E /I skills\\<name> %USERPROFILE%\\.dsh\\skills\\<name>）"
 fi
 
@@ -232,6 +244,10 @@ streamable-http 方式（公网 / 容器）：
     mcp__sysml-agent__generate_sysml
     mcp__sysml-agent__query_model
     mcp__sysml-agent__verify_sysml
+    mcp__sysml-agent__patch_model
+    mcp__sysml-agent__traceability
+    mcp__sysml-agent__parse_sysml
+    mcp__sysml-agent__export_simulink
 
 ==============================================================
  验证
@@ -243,7 +259,7 @@ streamable-http 方式（公网 / 容器）：
 "${TARGET_PY}" "${SERVER_PY}" --call validate_model_json \\
     --input "${HERE}/examples/golden-coaxial-power-chain/golden-coaxial-power-chain.ir.json"
 
-# 跑全部测试（186 个用例）
+# 跑全部测试（当前 527 个用例；以实际输出为准）
 "${HERE}/tests/run_tests.sh"
 
 # 起 HTTP 服务（云端接入用；公网暴露前务必设置 --auth-token）

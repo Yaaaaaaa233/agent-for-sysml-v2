@@ -335,7 +335,8 @@ flowchart LR
 
 <a id="ch4-3"></a>
 
-第一期只支持 **6 种元素**（落在 5~8 区间内，留余量）：
+第一期只支持 **6 种元素**（落在 5~8 区间内，留余量）；第 7、8 种为 **v1 增补**，
+已于 2026-10-17 落地（schema 版本号仍是 `sysml-ir/v1`，向后兼容）：
 
 | # | `kind` | 关键 `properties` |
 | --- | --- | --- |
@@ -345,8 +346,8 @@ flowchart LR
 | 4 | `ActionDefinition` | `inputs`、`outputs` |
 | 5 | `StateDefinition` | `states`、`transitions` |
 | 6 | `Attribute` | `valueType`、`defaultValue`、`unit` |
-| 7（二期） | `Constraint` | `expression`（参数公式文本）、`parameters` |
-| 8（二期） | `Connection` | `sourceRef`、`targetRef`、`flowKind` |
+| 7 | `Constraint` | `expression`（参数公式文本）、`parameters` —— **已落地（v1 增补，2026-10-17）** |
+| 8 | `Connection` | `sourceRef`、`targetRef`、`flowKind` —— **已落地（v1 增补，2026-10-17）** |
 
 **为什么宁窄勿宽**：元素种类越多，渲染模板越多、校验规则越多、LLM 选错的概率越大。窄集合能让选型决策树真正收敛；随比赛推进按需再加，一次加一种，并同步补测试样例与反模式。
 
@@ -699,16 +700,28 @@ sysml-modeling-agent/
 
 目标：从"生成一次"升级为"持续维护一个模型"。
 
-| 编号 | 任务 | 交付物 |
-| --- | --- | --- |
-| T7 | `parse_sysml` 双向打通（导入老师样本模型与既有模型） | 解析工具 + 往返一致性测试 |
-| T8 | `patch_model` 增量编辑（按 id 改子树） | 增量编辑工具 + diff 输出示例 |
-| T9 | `traceability` 追溯矩阵 | 矩阵生成工具 + 标杆案例的完整矩阵 |
-| T10 | `export_simulink` 参数与约束导出 | 导出工具 + 与仿真侧对接的参数表样例 |
-| T11 | 补齐 `worked-examples`、`domain-patterns` 两个 skill | 两份 skill 文档 + 5 个范例 |
-| T12 | DSH 扩展包规范化安装（对齐 T0 结论） | 可一键安装的能力包 + 安装说明 |
+| 编号 | 任务 | 交付物 | 状态（2026-10-17） |
+| --- | --- | --- | --- |
+| T7 | `parse_sysml` 双向打通（导入老师样本模型与既有模型） | 解析工具 + 往返一致性测试 | ✅ 代码与测试落地（`tools/parser.py`、`tests/test_roundtrip_v2.py`、`tests/test_official_parser.py`）；**⏳ 导入老师样本模型这一条待补**（样本未到） |
+| T8 | `patch_model` 增量编辑（按 id 改子树） | 增量编辑工具 + diff 输出示例 | ✅ 完成（`tools/patch.py`，原子/结构化 diff/cascade；演示见 `docs/demo/run-phase2-change/`） |
+| T9 | `traceability` 追溯矩阵 | 矩阵生成工具 + 标杆案例的完整矩阵 | ✅ 完成（`tools/trace.py`；标杆案例矩阵见 `docs/demo/run-phase2-change/step2-trace-before.txt`） |
+| T10 | `export_simulink` 参数与约束导出 | 导出工具 + 与仿真侧对接的参数表样例 | ✅ 完成（`tools/export.py`；样例 `docs/模拟侧参数表样例.md`） |
+| T11 | 补齐 `worked-examples`、`domain-patterns` 两个 skill | 两份 skill 文档 + 5 个范例 | ✅ 完成（`skills/worked-examples/`、`skills/domain-patterns/`） |
+| T12 | DSH 扩展包规范化安装（对齐 T0 结论） | 可一键安装的能力包 + 安装说明 | ✅ 完成（`install.sh` 验收记录 `docs/T12-安装验收.md`；升级安装需用户重跑 `./install.sh`） |
 
 **验收判据**：导入老师给的样本模型，全量解析成功并可再生成回等价文本；对标杆案例做一次需求变更，追溯矩阵自动反映影响范围。
+
+**验收判据的如实说明（2026-10-17）**：
+
+- **需求变更 → 追溯影响范围**：已按判据跑通，真实执行记录在
+  `docs/demo/run-phase2-change/`（`traceability` 矩阵前后对照 + `focus` 影响面 +
+  `patch_model` diff + `export_simulink` 阈值变化）。
+- **导入老师样本模型**：**尚未完成**——老师样本未到。现有的往返一致性由
+  golden 标杆案例、`docs/demo` 存档 IR 与一段手写同子集文本覆盖（`tests/test_roundtrip_v2.py`），
+  这只证明「本工具链自己的子集」可往返，**不证明**能完整导入外部样本的语法。
+- **官方解析器**：已在本机跑通，但结论只到「语法与引用解析经官方 Pilot Implementation
+  （release 2026-08）实测 0 error（证据：`docs/probe-official-parser/EVIDENCE.txt` §13/§14）；
+  语义/建模质量未验证」。这不是整体性背书。
 
 ### 9.3 第三期：共享部署与展示
 
@@ -732,7 +745,7 @@ sysml-modeling-agent/
 | 期次 | 主题 | 关键交付物 | 完成标志 |
 | --- | --- | --- | --- |
 | 第一期 | MVP 最小闭环 | IR Schema v1、3 个工具、3 个 skill、标杆案例骨架、测试样例、调研结论 | 一句话 → 合法 SysML v2 文本，全链路跑通 |
-| 第二期 | 双向与增量 | 7 个工具齐备、5 个 skill 齐备、规范化安装包 | 能导入既有模型并持续增量维护 |
+| 第二期 | 双向与增量 | 8 个工具齐备、5 个 skill 齐备、规范化安装包（2026-10-17 完成；T7 的「导入老师样本模型」待补） | 能导入既有模型并持续增量维护 |
 | 第三期 | 共享与展示 | 共享智能体、知识库、演示脚本、纠错流程 | 全组登录可用、演示完整可复现 |
 
 ---
@@ -823,7 +836,7 @@ sysml-modeling-agent/
 
 **Q：AI 建的模型能信吗？** 四层回答：
 
-1. **入口就限死了种类**：它不能自创元素类型，只能从我们定义的 6 种元素、5 种关系里选（受控枚举）。
+1. **入口就限死了种类**：它不能自创元素类型，只能从我们定义的 **8 种元素**（6 种 + v1 增补的 `Constraint`/`Connection`）、5 种关系里选（受控枚举）。
 2. **填完立刻校验**：字段缺失、引用不存在、命名重复都会被校验器挡住，改完才放行。
 3. **生成由代码完成，不由模型完成**：语法正确性由模板生成器保证，与模型"状态好不好"无关。
 4. **生成后还要回验**：文本再交给解析器读一遍，能读通才算通过，读不通就把错误打回去重修。

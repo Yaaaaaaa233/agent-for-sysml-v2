@@ -1,0 +1,47 @@
+# 第 1 步：parse_sysml 导入重新生成的 golden .sysml → IR
+#
+# 等价命令行（仓库根执行）：
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python -m tools.parser \
+#     examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+#
+# 本文件由 docs/demo/run-phase2-change/run_steps.py 实际执行后写出，未手工编辑。
+
+输入：examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+      chars  = 9766
+      sha256 = bb64cc2cbfdc5f5667049a76f6b57c4925a6ed29b2344c94d09d70e9ac6f6129
+
+返回（原样）：
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "unsupported": [],
+  "stats": {
+    "lines": 213,
+    "chars": 9766,
+    "package": "CoaxialOctoRotor",
+    "elements": 34,
+    "byKind": {
+      "PartDefinition": 7,
+      "PartUsage": 8,
+      "Requirement": 4,
+      "ActionDefinition": 2,
+      "StateDefinition": 1,
+      "Attribute": 9,
+      "Constraint": 1,
+      "Connection": 2
+    },
+    "relations": 20,
+    "imports": 2,
+    "synthesizedIds": 0,
+    "unsupported": 0,
+    "errors": 0,
+    "warnings": 0
+  }
+}
+
+导入结果与仓库里的 golden IR 做元素级比对（id/kind/name/owner/properties/relations）：
+  元素数 = 34，关系数 = 20
+  与 golden IR 元素级等价：是 ✅
+
+落盘：step1-imported.ir.json（sha256 eb7d58453dcacdd35e65498a20807f58e95cf561e066f76ecf4fef7f0adf65b4）

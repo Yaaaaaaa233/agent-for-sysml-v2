@@ -1,0 +1,117 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "FlightModeDemo",
+  "meta": {
+    "title": "范例 3：飞行状态机 + 在线优化动作（占位值）",
+    "note": "所有数值（转速比区间、保留电量比例、转速上限）均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-X8",
+      "kind": "PartDefinition",
+      "name": "CoaxialOctoRotorSystem",
+      "owner": "FlightModeDemo",
+      "properties": {
+        "description": "共轴八旋翼整机。"
+      }
+    },
+    {
+      "id": "PART-USE-X8",
+      "kind": "PartUsage",
+      "name": "x8System",
+      "owner": "FlightModeDemo",
+      "properties": {
+        "typeRef": "PART-DEF-X8",
+        "quantity": 1
+      }
+    },
+    {
+      "id": "STATE-FLIGHT-MODE",
+      "kind": "StateDefinition",
+      "name": "FlightModeStates",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "description": "飞行模式状态机。Standby 的出边是进入即走的完成迁移，不挂触发器/守卫。",
+        "states": ["Standby", "Grounded", "Climbing", "Cruising", "Returning", "Landing"],
+        "initial": "Standby",
+        "transitions": [
+          { "from": "Standby", "to": "Grounded" },
+          { "from": "Grounded", "to": "Climbing", "trigger": "takeoff command" },
+          { "from": "Climbing", "to": "Cruising", "trigger": "altitude reached" },
+          {
+            "from": "Cruising",
+            "to": "Returning",
+            "trigger": "reserve check",
+            "guard": "reserveEnergyFraction <= 0.15"
+          },
+          {
+            "from": "Cruising",
+            "to": "Cruising",
+            "trigger": "reserve check",
+            "guard": "reserveEnergyFraction > 0.15"
+          },
+          {
+            "from": "Cruising",
+            "to": "Cruising",
+            "trigger": "wind gust",
+            "guard": "speedRatio >= 0.75 and speedRatio <= 1.25"
+          },
+          {
+            "from": "Cruising",
+            "to": "Cruising",
+            "trigger": "wind gust",
+            "guard": "speedRatio < 0.75 or speedRatio > 1.25"
+          },
+          { "from": "Returning", "to": "Landing", "trigger": "home position reached" },
+          { "from": "Landing", "to": "Standby", "trigger": "disarm command" }
+        ]
+      }
+    },
+    {
+      "id": "ACT-ONLINE-OPT",
+      "kind": "ActionDefinition",
+      "name": "OnlinePowerOptimization",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "description": "巡航中的在线功率寻优：吃遥测，吐出速度与转速比指令。",
+        "inputs": [
+          { "name": "powerTelemetry", "typeRef": "Real", "unit": "W" },
+          { "name": "airspeedEstimate", "typeRef": "Real", "unit": "m/s" }
+        ],
+        "outputs": [
+          { "name": "speedCommand", "typeRef": "Real", "unit": "m/s" },
+          { "name": "speedRatioCommand", "typeRef": "Real" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-ROTOR-SPEED-RATIO",
+          "rationale": "寻优输出的转速比必须落在允许区间，可用该动作做区间校核。"
+        }
+      ]
+    },
+    {
+      "id": "REQ-ROTOR-SPEED-RATIO",
+      "kind": "Requirement",
+      "name": "RotorSpeedRatioBand",
+      "owner": "FlightModeDemo",
+      "properties": {
+        "text": "在线寻优给出的上下桨转速比 eta 必须落在允许工作区间内。",
+        "acceptanceCriteria": "对任意寻优输出满足 0.75 <= eta <= 1.25；且任一时刻任一桨转速不超过 6200 rpm。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "minSpeedRatio": 0.75,
+        "maxSpeedRatio": 1.25,
+        "maxRotorSpeedRpm": 6200.0
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "ACT-ONLINE-OPT",
+          "rationale": "由在线功率优化功能在寻优时施加区间约束。"
+        }
+      ]
+    }
+  ]
+}

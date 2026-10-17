@@ -1,0 +1,11 @@
+# 本目录是 spike 现场：官方解析器的大二进制不入 git。
+# 获取方式与校验和见同目录 EVIDENCE.txt 的「下载与解包」一节。
+*.zip
+*.tar.gz
+*.jar
+*.parts/
+jre/
+kernel/
+
+# Python 缓存
+__pycache__/

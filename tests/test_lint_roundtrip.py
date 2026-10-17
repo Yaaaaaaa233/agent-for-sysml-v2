@@ -11,6 +11,8 @@ import unittest
 
 from _support import (
     base_model,
+    extended_model,
+    extract_connections,
     extract_declarations,
     generate_sysml,
     golden_model,
@@ -28,6 +30,48 @@ class TestLintAccepts(unittest.TestCase):
     def test_golden_text_is_clean(self):
         result = lint_sysml(generate_sysml(golden_model())["text"])
         self.assertTrue(result["ok"], msg=result["errors"])
+
+    def test_generated_text_with_new_kinds_is_clean(self):
+        result = lint_sysml(generate_sysml(extended_model())["text"])
+        self.assertTrue(result["ok"], msg=result["errors"])
+
+    def test_hand_written_new_syntax_is_clean(self):
+        """单位后缀 / 多重度 / initial / transition / connect + 结构化注释都要被接受。"""
+        text = (
+            "package A {\n"
+            "    part def B;\n"
+            "    part b : B[8];\n"
+            "    attribute v : Real = 1.0 [V];\n"
+            "    state def M {\n"
+            "        entry; then Idle;\n"
+            "        state Idle;\n"
+            "        state Running;\n"
+            "        // trigger: start\n"
+            "        transition T_Idle_to_Running_0 first Idle if (v > 0) then Running;\n"
+            "    }\n"
+            "    // Connection C1 flowKind=electrical\n"
+            "    connect b to b;\n"
+            "}\n"
+        )
+        result = lint_sysml(text)
+        self.assertTrue(result["ok"], msg=result["errors"])
+
+    def test_standard_library_imports_are_clean(self):
+        """生成器固定输出的两行标准库 import 必须被 lint 认作合法语句。"""
+        text = (
+            "package A {\n"
+            "    private import ScalarValues::*;\n"
+            "    private import SI::*;\n"
+            "    part def B;\n"
+            "}\n"
+        )
+        result = lint_sysml(text)
+        self.assertTrue(result["ok"], msg=result["errors"])
+
+    def test_unknown_import_prefix_is_clean_statement(self):
+        """lint 只做语句形态自查：public import 也是合法语句（语义另说）。"""
+        text = "package A {\n    public import SI::*;\n}\n"
+        self.assertTrue(lint_sysml(text)["ok"])
 
     def test_hand_written_minimal_text_is_clean(self):
         text = "package A {\n    part def B;\n    part c : B;\n}\n"
@@ -76,6 +120,39 @@ class TestLintRejects(unittest.TestCase):
     def test_missing_package_wrapper_warns(self):
         result = lint_sysml("part def A;\n")
         self.assertIn("L007", [w["code"] for w in result["warnings"]])
+
+    def test_connection_annotation_missing_flow_kind(self):
+        self.assertReports(
+            "package A {\n"
+            "    // Connection C1\n"
+            "    connect b to c;\n"
+            "}\n",
+            "L008",
+            line=2,
+        )
+
+    def test_connection_annotation_without_connect_statement(self):
+        self.assertReports(
+            "package A {\n"
+            "    // Connection C1 flowKind=electrical\n"
+            "}\n",
+            "L009",
+            line=2,
+        )
+
+    def test_transition_must_use_official_form(self):
+        """`transition from A to B ...` 不是官方记法，lint 必须报 L010。"""
+        self.assertReports(
+            "package A {\n"
+            "    state def S {\n"
+            "        state A;\n"
+            "        state B;\n"
+            "        transition from A to B when start;\n"
+            "    }\n"
+            "}\n",
+            "L010",
+            line=5,
+        )
 
     def test_non_string_input_is_rejected(self):
         self.assertFalse(lint_sysml(None)["ok"])
@@ -146,6 +223,68 @@ class TestExtractDeclarations(unittest.TestCase):
         self.assertEqual(usage["scope"], "Motor")
         self.assertEqual(usage["scopeKind"], "PartDefinition")
 
+    def test_extracts_unit_and_multiplicity_suffixes(self):
+        result = extract_declarations(generate_sysml(base_model())["text"])
+        attribute = [
+            d
+            for d in result["declarations"]
+            if d["kind"] == "Attribute" and d["name"] == "ratedVoltage"
+        ][0]
+        usage = [d for d in result["declarations"] if d["kind"] == "PartUsage"][0]
+        self.assertEqual(attribute["unit"], "V")
+        self.assertEqual(usage["multiplicity"], "4")
+
+    def test_extracts_constraint_structured_comments(self):
+        result = extract_declarations(generate_sysml(extended_model())["text"])
+        constraint = [d for d in result["declarations"] if d["kind"] == "Constraint"][0]
+        self.assertEqual(constraint["name"], "EnduranceBudget")
+        self.assertEqual(constraint["expression"], "T = ratedVoltage / 2.0")
+        self.assertEqual(constraint["parameters"], ["ratedVoltage"])
+        self.assertEqual(constraint["scopeKind"], "Package")
+
+    def test_extracts_connection_annotation_pair(self):
+        result = extract_connections(generate_sysml(extended_model())["text"])
+        self.assertTrue(result["ok"], msg=result)
+        self.assertEqual(result["count"], 1)
+        entry = result["connections"][0]
+        self.assertEqual(entry["id"], "CONN-MOTOR-ESC")
+        self.assertEqual(entry["flowKind"], "electrical")
+        self.assertEqual(entry["name"], "motorToEsc")
+        self.assertEqual(entry["source"], "motorOne")
+        self.assertEqual(entry["target"], "escUnit")
+        self.assertEqual(entry["description"], "电机由电调驱动。")
+
+    def test_extracts_state_initial_and_transitions(self):
+        model = base_model()
+        for item in model["elements"]:
+            if item["id"] == "STATE-A":
+                item["properties"]["transitions"] = [
+                    {"from": "Idle", "to": "Running", "trigger": "start command", "guard": "rpm > 1000"},
+                    {"from": "Running", "to": "Idle"},
+                ]
+        result = extract_declarations(generate_sysml(model)["text"])
+        state = [d for d in result["declarations"] if d["kind"] == "StateDefinition"][0]
+        self.assertEqual(state["initial"], "Idle")
+        self.assertEqual(
+            state["transitions"],
+            [
+                {
+                    "name": "Transition_Idle_to_Running_0",
+                    "from": "Idle",
+                    "to": "Running",
+                    "guard": "rpm > 1000",
+                    "trigger": "start command",
+                },
+                {
+                    "name": "Transition_Running_to_Idle_1",
+                    "from": "Running",
+                    "to": "Idle",
+                    "guard": None,
+                    "trigger": None,
+                },
+            ],
+        )
+
 
 class TestRoundtrip(unittest.TestCase):
     def test_golden_roundtrip_is_exact(self):
@@ -153,14 +292,77 @@ class TestRoundtrip(unittest.TestCase):
         text = generate_sysml(model)["text"]
         result = roundtrip_check(model, text)
         self.assertTrue(result["ok"], msg=result)
-        self.assertEqual(result["counts"]["irElements"], 30)
-        self.assertEqual(result["counts"]["matched"], 30)
+        # 元素数动态取自 golden IR，避免并行任务增删元素时这里再漂移
+        expected = len(model["elements"])
+        self.assertEqual(result["counts"]["irElements"], expected)
+        self.assertEqual(result["counts"]["matched"], expected)
+
+    def test_extended_roundtrip_is_exact(self):
+        model = extended_model()
+        text = generate_sysml(model)["text"]
+        result = roundtrip_check(model, text)
+        self.assertTrue(result["ok"], msg=result)
+        self.assertEqual(result["counts"]["mismatched"], 0)
+        self.assertEqual(result["connectionsByKind"], 1)
+
+    def test_detects_constraint_expression_mismatch(self):
+        model = extended_model()
+        text = generate_sysml(model)["text"]
+        damaged = text.replace("// expression: T = ratedVoltage / 2.0", "// expression: T = 0")
+        result = roundtrip_check(model, damaged)
+        self.assertFalse(result["ok"])
+        self.assertIn("expression", [m["field"] for m in result["mismatched"]])
+
+    def test_detects_constraint_parameters_mismatch(self):
+        model = extended_model()
+        text = generate_sysml(model)["text"]
+        damaged = text.replace("// parameters: ratedVoltage", "// parameters: otherAttribute")
+        result = roundtrip_check(model, damaged)
+        self.assertFalse(result["ok"])
+        self.assertIn("parameters", [m["field"] for m in result["mismatched"]])
+
+    def test_detects_connection_flow_kind_mismatch(self):
+        model = extended_model()
+        text = generate_sysml(model)["text"]
+        damaged = text.replace("flowKind=electrical", "flowKind=thermal")
+        result = roundtrip_check(model, damaged)
+        self.assertFalse(result["ok"])
+        self.assertIn("flowKind", [m["field"] for m in result["mismatched"]])
+
+    def test_detects_connection_endpoint_swap(self):
+        model = extended_model()
+        text = generate_sysml(model)["text"]
+        damaged = text.replace("connect motorOne to escUnit;", "connect escUnit to motorOne;")
+        result = roundtrip_check(model, damaged)
+        self.assertFalse(result["ok"])
+        self.assertEqual(
+            {m["field"] for m in result["mismatched"]}, {"sourceRef", "targetRef"}
+        )
+
+    def test_detects_state_transition_guard_mismatch(self):
+        model = base_model()
+        for item in model["elements"]:
+            if item["id"] == "STATE-A":
+                item["properties"]["transitions"][0]["guard"] = "rpm > 1000"
+        text = generate_sysml(model)["text"]
+        damaged = text.replace("if (rpm > 1000)", "if (rpm > 2000)")
+        result = roundtrip_check(model, damaged)
+        self.assertFalse(result["ok"])
+        self.assertIn("transitions", [m["field"] for m in result["mismatched"]])
+
+    def test_detects_state_initial_mismatch(self):
+        model = base_model()
+        text = generate_sysml(model)["text"]
+        damaged = text.replace("entry; then Idle;", "entry; then Running;")
+        result = roundtrip_check(model, damaged)
+        self.assertFalse(result["ok"])
+        self.assertIn("initial", [m["field"] for m in result["mismatched"]])
 
     def test_detects_element_missing_from_text(self):
         """从文本里删掉一条声明，回验必须报 missing。"""
         model = base_model()
         text = generate_sysml(model)["text"]
-        damaged = text.replace("    attribute ratedVoltage : Real = 24.0;  // unit: V\n", "")
+        damaged = text.replace("    attribute ratedVoltage : Real = 24.0 [V];\n", "")
         result = roundtrip_check(model, damaged)
         self.assertFalse(result["ok"])
         self.assertEqual([m["name"] for m in result["missing"]], ["ratedVoltage"])
@@ -178,7 +380,7 @@ class TestRoundtrip(unittest.TestCase):
         """文本里把 PartUsage 的类型改错，回验必须报 mismatched。"""
         model = base_model()
         text = generate_sysml(model)["text"]
-        damaged = text.replace("part motorOne : Motor;", "part motorOne : WrongType;")
+        damaged = text.replace("part motorOne : Motor[4];", "part motorOne : WrongType[4];")
         result = roundtrip_check(model, damaged)
         self.assertFalse(result["ok"])
         self.assertEqual(result["mismatched"][0]["field"], "typeRef")
@@ -217,7 +419,9 @@ class TestHonestLimits(unittest.TestCase):
 
     def test_roundtrip_does_not_check_type_existence(self):
         model = base_model()
-        text = generate_sysml(model)["text"].replace("part motorOne : Motor;", "part motorOne : Ghost;")
+        text = generate_sysml(model)["text"].replace(
+            "part motorOne : Motor[4];", "part motorOne : Ghost[4];"
+        )
         # 会报 mismatched（因为 IR 里是 Motor），但报的不是「Ghost 不存在」
         result = roundtrip_check(model, text)
         self.assertEqual(len(result["mismatched"]), 1)

@@ -25,6 +25,7 @@ if str(MCP_SERVER) not in sys.path:
 from tools.generator import generate_sysml  # noqa: E402,F401
 from tools.query import query_model  # noqa: E402,F401
 from tools.sysml_lint import (  # noqa: E402,F401
+    extract_connections,
     extract_declarations,
     lint_sysml,
     roundtrip_check,
@@ -108,6 +109,58 @@ def base_model() -> Dict[str, Any]:
     }
 
 
+def extended_model() -> Dict[str, Any]:
+    """在 ``base_model`` 基础上补齐 v1 增补的两种 kind（Constraint / Connection）。
+
+    保持「完全合法且零 warning」：新增的 PartDefinition 被 PartUsage 实例化，
+    Connection 两端都是同 owner（Demo）的 PartUsage，Constraint 只引用 Attribute。
+    供新 kind 的正反例、渲染与回验使用；不改动 ``base_model`` 本身（其他测试在依赖它）。
+    """
+    model = copy.deepcopy(base_model())
+    model["elements"].extend(
+        [
+            {
+                "id": "PART-DEF-ESC",
+                "kind": "PartDefinition",
+                "name": "SpeedController",
+                "owner": "Demo",
+                "properties": {"description": "电子调速器。"},
+            },
+            {
+                "id": "PART-USE-ESC",
+                "kind": "PartUsage",
+                "name": "escUnit",
+                "owner": "Demo",
+                "properties": {"typeRef": "PART-DEF-ESC", "quantity": 2, "description": "两路电调。"},
+            },
+            {
+                "id": "CONSTRAINT-ENDURANCE",
+                "kind": "Constraint",
+                "name": "EnduranceBudget",
+                "owner": "Demo",
+                "properties": {
+                    "expression": "T = ratedVoltage / 2.0",
+                    "parameters": ["ATTR-A"],
+                    "description": "占位公式，仅用于演示 Constraint 的渲染与回验。",
+                },
+            },
+            {
+                "id": "CONN-MOTOR-ESC",
+                "kind": "Connection",
+                "name": "motorToEsc",
+                "owner": "Demo",
+                "properties": {
+                    "sourceRef": "PART-USE-MOTOR",
+                    "targetRef": "PART-USE-ESC",
+                    "flowKind": "electrical",
+                    "description": "电机由电调驱动。",
+                },
+            },
+        ]
+    )
+    return model
+
+
 def mutate(model: Dict[str, Any], **changes: Any) -> Dict[str, Any]:
     """浅层改顶层字段。"""
     clone = copy.deepcopy(model)
@@ -139,6 +192,7 @@ def golden_model() -> Dict[str, Any]:
 
 __all__ = [
     "base_model",
+    "extended_model",
     "mutate",
     "edit_element",
     "element",
@@ -150,6 +204,7 @@ __all__ = [
     "query_model",
     "lint_sysml",
     "extract_declarations",
+    "extract_connections",
     "roundtrip_check",
     "GOLDEN_IR",
     "GOLDEN_SYSML",

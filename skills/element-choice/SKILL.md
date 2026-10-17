@@ -13,14 +13,19 @@ metadata:
 
 # element-choice —— 元素选型决策树
 
-**一句话：只问三个岔路口。** 每个岔路口都有一句**可判定**的判据；判不出来就说明输入不够，
+**一句话：只问四个岔路口。** 每个岔路口都有一句**可判定**的判据；判不出来就说明输入不够，
 该回去追问，而不是硬选一个。
 
-MVP 的受控枚举只有 6 种 kind，**不许自创**：
+受控枚举现有 **8 种 kind**，**不许自创**：
 
 ```
 PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinition · Attribute
+Constraint · Connection          ← v1 增补 kind
 ```
+
+`Constraint`（参数约束/公式）与 `Connection`（结构连接）是 **v1 增补 kind**：
+在 v1 内向后兼容新增，schema 版本号不变。它们**已经能用**（已收录进 schema、校验与渲染），
+不是规划中的东西；但第 9 种 kind 仍然不许自己发明（`E-KIND-INVALID`）。
 
 ---
 
@@ -38,8 +43,8 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
 │
 ├─ 岔路口 B：它是「某部件必然成立的物理关系」吗？（P = U·I、T = E/P、力 = 质量×加速度）
 │   │   判据：这句话在**任何**设计选择下都成立吗？换个电池它也成立吗？
-│   ├─ 是 ──→ 【Attribute】（公式写进 description）
-│   │         MVP 没有正式的 Constraint 元素，公式暂由参数承载（二期补）
+│   ├─ 是 ──→ 【Constraint】（v1 增补 kind，已支持）
+│   │         公式进 expression，符号对应的量建【Attribute】并列进 parameters
 │   └─ 否 ─→ 回到岔路口 A / C / D
 │
 ├─ 岔路口 C：它描述「持续处于某状态 + 被事件触发迁移」吗？
@@ -53,14 +58,18 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
     └─ 具体 ─→ 【*Usage】（如 PartUsage: batteryPack，**必须带 typeRef**）
 ```
 
-## §2 三个岔路口的 30 秒版
+## §2 四个岔路口的 30 秒版
 
 | 岔路口 | 一句话判据 | 选 A | 选 B |
 | --- | --- | --- | --- |
-| A 需求 vs 参数/约束 | 「换个设计它是否就变了？」变了=需求；不变（物理定律）=参数 | 变了 → Requirement | 不变 → Attribute |
+| A 需求 vs 参数/约束 | 「换个设计它是否就变了？」变了=需求；不变（物理定律）=参数/约束 | 变了 → Requirement | 不变 → Constraint（参数值归 Attribute） |
+| B 约束 vs 状态/动作 | 「它在任何设计下都成立，还是只有某个设计把它跑起来才谈得上？」 | 永远成立 → Constraint | 被事件驱动 → 岔路口 C |
 | C 状态 vs 动作 | 「我要写的是『处于什么状态』还是『做完什么』？」 | 状态 → StateDefinition | 做完 → ActionDefinition |
 | D Definition vs Usage | 「我要不要数它的个数 / 指它的位置？」 | 不要 → *Definition | 要 → *Usage |
-| 需求拆分 vs 细化 | 「拆出来的每条能各自写验收判据、各自被满足吗？」 | 能 → `decomposes`（并列子条） | 只是说得更准 → `refines` |
+
+> 还有一个**不是 kind 岔路口**的问题（它决定 `relations[].type`，不决定元素种类）：
+> **需求拆分 vs 细化**——「拆出来的每条能各自写验收判据、各自被满足吗？」能 → `decomposes`
+> （并列子条）；只是说得更准 → `refines`。
 
 ---
 
@@ -89,8 +98,11 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
 - **两边都像**：它是工程上的重要约束，写进模型天经地义；但它不是「要求」，是定律。
 - **决定性判据**：**换任何设计，这条都成立吗？** 成立。需求描述的是「我们要做到什么」，
   物理定律描述的是「这个世界怎样运行」。
-- **结论**：**不是 Requirement**。MVP 把它写进相关 `Attribute` 的 `description`
-  （正式 `Constraint` 元素是二期，别为了放公式去自创 kind——会报 `E-KIND-INVALID`）。
+- **结论**：**不是 Requirement**。建 `Constraint`（**v1 增补 kind**，已支持）：公式进
+  `expression`（单行），符号对应的量各建一个 `Attribute`，id 列进 `parameters`。
+  公式与参数**分开放**——换电池只改 `Attribute` 的值，不动公式。
+  别为了放公式去自创 kind（会报 `E-KIND-INVALID`）；老工具版本还没收录 `Constraint` 时，
+  才退回把公式写进相关 `Attribute` 的 `description`。
 - **常见误判**：把它建成 Requirement 会污染需求链，导致追溯矩阵里出现一条「永远不会失败的需求」，
   评审时会当场被问住。
 
@@ -100,21 +112,27 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
 - **决定性判据**：**问「能不能停在中间」**。如果「巡航」可以持续 4 小时、期间外界事件
   （逆风、电量告警）能让它**跳出去**，那是**状态**；如果「爬升」做完就必然进下一环、没有停留与跳转，
   那只是流程里的一个步骤。
-- **结论**：这四个都是 `StateDefinition` 的 `states`，且 transition 要带 `trigger`
-  （如 `逆风告警`、`电量低于阈值`）。方案 7.3 的原始要求就是「巡航（在线寻优）状态内的参数漂移」——
-  正说明它们是有停留、有事件的状态。
-- **IR 片段**：
+- **结论**：这四个都是 `StateDefinition` 的 `states`，且**事件迁移都要带 `trigger`**
+  （如 `takeoff command`、`altitude reached`、`reserve check`）。方案 7.3 的原始要求就是
+  「巡航（在线寻优）状态内的参数漂移」——正说明它们是有停留、有事件的状态。
+- **IR 片段**（`Standby` 只负责「上电进入」，出边是完成迁移，不挂 trigger/guard）：
 ```json
 { "id": "STATE-FLIGHT-MODE", "kind": "StateDefinition", "name": "FlightModeStates",
   "owner": "CoaxialOctoRotor",
-  "properties": { "states": ["Grounded", "Climbing", "Cruising", "Returning", "Landing"],
-                  "initial": "Grounded",
+  "properties": { "states": ["Standby", "Grounded", "Climbing", "Cruising", "Returning", "Landing"],
+                  "initial": "Standby",
                   "transitions": [
+                    { "from": "Standby", "to": "Grounded" },
                     { "from": "Grounded", "to": "Climbing", "trigger": "takeoff command" },
                     { "from": "Climbing", "to": "Cruising", "trigger": "altitude reached" },
                     { "from": "Cruising", "to": "Returning", "trigger": "reserve energy reached" },
                     { "from": "Cruising", "to": "Cruising", "trigger": "wind gust", "guard": "speed ratio within band" } ] } }
 ```
+- **为什么 `initial` 出边不挂 `trigger`（反模式第 16 条）**：初始迁移是「**进入即走**」的完成迁移，
+  给它挂触发器等于入口**永远在等一个不会来的事件**（Cameo 官方案例的兵图就这么错过：外层初始 →
+  `Unmoved` 挂了 `create` 信号事件）。需要「上电触发」就**显式建一个上电状态**（这里的 `Standby`），
+  让 `takeoff command` 这类事件迁移从**非初始态** `Grounded` 出发。validate **不会**报这条
+  （结构合法），只能靠自检与评审拦。
 - **注意**：transition 的 `from`/`to` 必须都在 `states` 里，否则报 `E-STATE-TRANSITION-ENDPOINT`。
 
 ### 案例 4：「在线功率优化」——ActionDefinition 还是 StateDefinition？
@@ -161,7 +179,7 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
 ### 案例 7：「续航不低于 4 小时」——阈值写数字还是写字符串？
 
 - **两边都像**：JSON 里 `"4.0"` 和 `4.0` 看起来差不多，人读都懂。
-- **决定性判据**：**它要参与计算或导出吗？** 要（`export_simulink` 二期要拿它做仿真）。
+- **决定性判据**：**它要参与计算或导出吗？** 要（`export_simulink` 用它生成仿真参数表）。
 - **结论**：**必须写成数字** `"minEnduranceHours": 4.0`，单位放进独立字段；
   写成 `"4 小时"` 会直接报 `E-PROP-THRESHOLD-STRING`。
 - **一句话**：字符串是给人看的，数字是给机器算的。需求阈值属于后者。
@@ -179,7 +197,7 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
   → 功能需求**，每条各有验收判据与满足链。别跳级建条目。
 - **每条子需求仍要走双线**：`satisfiedBy`（谁做到）+ `verifies`（谁验证）；**父需求的满足靠子需求集体满足**，
   不给父需求硬塞一个「综合」部件。
-- **IR 片段**（只落到我们 6 种 kind 上：父需求与四条子需求都是 `Requirement`，关系是 `decomposes`）：
+- **IR 片段**（只落到我们 8 种 kind 上：父需求与四条子需求都是 `Requirement`，关系是 `decomposes`）：
 ```json
 [{ "id": "REQ-UAV-SINGLE-FAILURE", "kind": "Requirement", "name": "SingleRotorFailureSafety",
    "owner": "UAV-REQUIREMENTS",
@@ -203,7 +221,7 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
     同一本书被多人同时借（或历史上被借过多次）就崩了。
   - 不要 → 直接一条**具名 relation**（写清 `rationale`）即可，别为一条线建元素。
 - **结论**：借阅落在前一半，建独立元素承载它的数据，两端各连一条具名关系。
-  **注意 IR 语境**：我们没有 UML 的「关联类」这种构造，表达只能落在 6 种 kind + 5 种关系里，
+  **注意 IR 语境**：我们没有 UML 的「关联类」这种构造，表达只能落在 8 种 kind + 5 种关系里，
   **别为了表达关系属性自创 kind**（`E-KIND-INVALID` 红线照旧）；
   承载数据的那个元素必须有 owner、**不能是孤儿**（`PartDefinition` 有 `W-ELEMENT-ORPHAN` 兜底；
   其他 kind validate 不报，靠 `query_model(referrers_of=<id>)` 自查）。
@@ -215,7 +233,7 @@ PartDefinition · PartUsage · Requirement · ActionDefinition · StateDefinitio
 
 ## §4 选型时的自查清单
 
-- [ ] 我选的 kind **在受控枚举的 6 个里面**吗？（自创 = `E-KIND-INVALID`，没得商量）
+- [ ] 我选的 kind **在受控枚举的 8 个里面**吗？（自创 = `E-KIND-INVALID`，没得商量）
 - [ ] 如果是 `Requirement`：`text` 和 `acceptanceCriteria` 都写了吗？阈值是数字吗？
 - [ ] 如果是 `PartUsage`：`typeRef` 指向的 `PartDefinition` **已存在**吗？
 - [ ] 如果是 `StateDefinition`：transition 的 `from`/`to` 都在 `states` 里吗？

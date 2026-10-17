@@ -1,0 +1,114 @@
+# 第 5 步：变更后 traceability（矩阵 + 缺口 + 影响面）
+#
+# 等价命令行：
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python mcp-server/run_server.py --call traceability \
+#     --model-file docs/demo/run-phase2-change/step3-patched.ir.json --input '{"fmt": "md"}'
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python mcp-server/run_server.py --call traceability \
+#     --model-file docs/demo/run-phase2-change/step3-patched.ir.json \
+#     --input '{"focus": "REQ-CRUISE-ENDURANCE", "fmt": "md"}'
+
+===== 5.1 矩阵自动反映了什么（变更前 vs 变更后逐行比对）=====
+矩阵有变化的行：1 行（其余 3 行逐字段相同）
+[
+  {
+    "requirement": "REQ-CRUISE-ENDURANCE",
+    "before": {
+      "text_short": "巡航时间不低于 4 小时",
+      "status": "satisfied-and-verified"
+    },
+    "after": {
+      "text_short": "巡航时间不低于 5 小时",
+      "status": "satisfied-and-verified"
+    }
+  }
+]
+
+说明：矩阵的 status 由 satisfiedBy / verifiedBy 结构决定，本次变更只改字段值与
+文本，不改结构，所以 status 不变、text_short 从 4 小时变成 5 小时——矩阵确实跟着
+事实来源（IR）自动重算，不需要手工维护表格。
+
+===== 5.2 变更后 gaps =====
+{
+  "unsatisfied": [],
+  "unverified_requirement": [],
+  "unverified_action": []
+}
+
+===== 5.3 traceability(focus="REQ-CRUISE-ENDURANCE") 的影响面 =====
+impact =
+{
+  "id": "REQ-CRUISE-ENDURANCE",
+  "direct": [
+    "ACT-SIM-ENDURANCE",
+    "REQ-MISSION-ENDURANCE",
+    "REQ-POWER-BUDGET",
+    "REQ-ROTOR-SPEED-RATIO"
+  ],
+  "transitive": [
+    "ACT-ONLINE-OPTIMIZATION",
+    "PART-USAGE-SYSTEM"
+  ],
+  "affected_requirements": [
+    "REQ-CRUISE-ENDURANCE",
+    "REQ-MISSION-ENDURANCE",
+    "REQ-POWER-BUDGET",
+    "REQ-ROTOR-SPEED-RATIO"
+  ]
+}
+
+===== 5.4 以「被改的 3 个元素」为焦点的合并影响面 =====
+focus = [
+  "REQ-CRUISE-ENDURANCE",
+  "ATTR-ENDURANCE",
+  "CONSTRAINT-ENDURANCE-BUDGET"
+]
+impact =
+{
+  "id": [
+    "REQ-CRUISE-ENDURANCE",
+    "ATTR-ENDURANCE",
+    "CONSTRAINT-ENDURANCE-BUDGET"
+  ],
+  "direct": [
+    "ACT-SIM-ENDURANCE",
+    "REQ-MISSION-ENDURANCE",
+    "REQ-POWER-BUDGET",
+    "REQ-ROTOR-SPEED-RATIO"
+  ],
+  "transitive": [
+    "ACT-ONLINE-OPTIMIZATION",
+    "PART-USAGE-SYSTEM"
+  ],
+  "affected_requirements": [
+    "REQ-CRUISE-ENDURANCE",
+    "REQ-MISSION-ENDURANCE",
+    "REQ-POWER-BUDGET",
+    "REQ-ROTOR-SPEED-RATIO"
+  ]
+}
+
+===== 5.5 content（fmt=md，focus=REQ-CRUISE-ENDURANCE）=====
+# 追溯矩阵
+
+> 模型：`CoaxialOctoRotor`；需求 4 条；状态分布：satisfied-and-verified 4 / satisfied 0 / verified-only 0 / unsatisfied 0。
+
+| 需求 id | 名称 | 需求摘要 | satisfiedBy | verifiedBy | 状态 |
+| --- | --- | --- | --- | --- | --- |
+| `REQ-CRUISE-ENDURANCE` | CruiseEndurance | 巡航时间不低于 5 小时 | `PART-BATTERY-PACK` | `ACT-SIM-ENDURANCE` | satisfied-and-verified |
+| `REQ-MISSION-ENDURANCE` | MissionEndurance | 任务级续航：共轴八旋翼须按指定任务剖面完成起飞、巡航与安全返航。 | `PART-POWER-CHAIN` | `ACT-SIM-ENDURANCE` | satisfied-and-verified |
+| `REQ-POWER-BUDGET` | CruisePowerBudget | 巡航稳态下整机电功率不超过电池可持续放电功率上限。 | `PART-POWER-CHAIN` | `ACT-SIM-ENDURANCE` | satisfied-and-verified |
+| `REQ-ROTOR-SPEED-RATIO` | RotorSpeedRatioBand | 在线寻优给出的上下桨转速比 eta 必须落在允许工作区间内。 | `ACT-ONLINE-OPTIMIZATION` | `ACT-ONLINE-OPTIMIZATION` | satisfied-and-verified |
+
+## 缺口
+
+- 未满足（无 satisfiedBy）：—
+- 未被验证的需求：—
+- 未被验证的功能（ActionDefinition 无 verifies）：—
+
+## 影响面（focus=`REQ-CRUISE-ENDURANCE`）
+
+- 直接引用：`ACT-SIM-ENDURANCE`、`REQ-MISSION-ENDURANCE`、`REQ-POWER-BUDGET`、`REQ-ROTOR-SPEED-RATIO`
+- 传递闭包：`ACT-ONLINE-OPTIMIZATION`、`PART-USAGE-SYSTEM`
+- 受影响需求：`REQ-CRUISE-ENDURANCE`、`REQ-MISSION-ENDURANCE`、`REQ-POWER-BUDGET`、`REQ-ROTOR-SPEED-RATIO`
+
+

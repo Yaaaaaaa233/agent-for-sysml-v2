@@ -1,0 +1,202 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "FailureResilienceMini",
+  "meta": {
+    "title": "模式 4：单桨失效保护（需求分解 + 状态机，占位值）",
+    "note": "失效检测时延、高度损失、姿态误差均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-X8",
+      "kind": "PartDefinition",
+      "name": "CoaxialOctoRotorSystem",
+      "owner": "FailureResilienceMini",
+      "properties": { "description": "共轴八旋翼整机。" }
+    },
+    {
+      "id": "PART-USE-X8",
+      "kind": "PartUsage",
+      "name": "x8System",
+      "owner": "FailureResilienceMini",
+      "properties": { "typeRef": "PART-DEF-X8", "quantity": 1 }
+    },
+    {
+      "id": "REQ-FAIL-SAFE",
+      "kind": "Requirement",
+      "name": "SingleRotorFailureSafety",
+      "owner": "FailureResilienceMini",
+      "properties": {
+        "text": "单桨失效时无人机不坠毁。",
+        "acceptanceCriteria": "任一桨失效后高度损失 <= 2.0 m 且姿态误差 <= 5.0 deg（占位值）。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "maxAltitudeLossM": 2.0,
+        "maxAttitudeErrorDeg": 5.0
+      },
+      "relations": [
+        {
+          "type": "decomposes",
+          "target": "REQ-FAIL-DETECT",
+          "rationale": "要保安全，先要能识别哪副桨失效。"
+        },
+        {
+          "type": "decomposes",
+          "target": "REQ-FAIL-ATTITUDE",
+          "rationale": "失效后姿态必须可控，否则后续动作无从谈起。"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-X8",
+          "rationale": "系统级安全目标由整机（结构 + 控制）集体满足。"
+        }
+      ]
+    },
+    {
+      "id": "REQ-FAIL-DETECT",
+      "kind": "Requirement",
+      "name": "DetectRotorFailure",
+      "owner": "FailureResilienceMini",
+      "properties": {
+        "text": "失效检测：识别失效桨位。",
+        "acceptanceCriteria": "失效后 100 ms 内报出失效桨位（占位值）。",
+        "verifyMethod": "test",
+        "priority": "high",
+        "maxDetectionTimeMs": 100.0
+      },
+      "relations": [
+        {
+          "type": "refines",
+          "target": "REQ-FAIL-SAFE",
+          "rationale": "是父需求在检测环节上的更精确表述。"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "ACT-FAIL-DETECT",
+          "rationale": "由失效检测功能满足。"
+        }
+      ]
+    },
+    {
+      "id": "REQ-FAIL-ATTITUDE",
+      "kind": "Requirement",
+      "name": "HoldAttitudeAfterFailure",
+      "owner": "FailureResilienceMini",
+      "properties": {
+        "text": "失效后保持姿态可控。",
+        "acceptanceCriteria": "失效后 1.0 s 内姿态误差收敛到 <= 5.0 deg（占位值）。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "maxAttitudeErrorDeg": 5.0
+      },
+      "relations": [
+        {
+          "type": "refines",
+          "target": "REQ-FAIL-SAFE",
+          "rationale": "是父需求在姿态环节上的更精确表述。"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "ACT-HOLD-ATTITUDE",
+          "rationale": "由姿态保持功能满足。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-FAIL-DETECT",
+      "kind": "ActionDefinition",
+      "name": "RotorFailureDetector",
+      "owner": "FailureResilienceMini",
+      "properties": {
+        "description": "比较各桨转速/电流残差，定位失效桨位。",
+        "inputs": [
+          { "name": "rotorTelemetry", "typeRef": "Real", "unit": "1" }
+        ],
+        "outputs": [
+          { "name": "failedRotorIndex", "typeRef": "Integer" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-FAIL-DETECT",
+          "rationale": "用注入失效的试验数据核验检测时延。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-HOLD-ATTITUDE",
+      "kind": "ActionDefinition",
+      "name": "AttitudeRecoveryController",
+      "owner": "FailureResilienceMini",
+      "properties": {
+        "description": "重构控制分配，保持姿态。",
+        "inputs": [
+          { "name": "attitudeEstimate", "typeRef": "Real", "unit": "deg" },
+          { "name": "failedRotorIndex", "typeRef": "Integer" }
+        ],
+        "outputs": [
+          { "name": "motorCommands", "typeRef": "Real", "unit": "1" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-FAIL-ATTITUDE",
+          "rationale": "用失效工况仿真核验姿态收敛。"
+        }
+      ]
+    },
+    {
+      "id": "STATE-FAIL-SAFE",
+      "kind": "StateDefinition",
+      "name": "SingleFailureStates",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "description": "单桨失效保护状态机。初始状态的出边是完成迁移，事件迁移都从非初始状态出发。",
+        "states": ["Standby", "Normal", "FailureDetected", "Reconfigured", "SafeLanding"],
+        "initial": "Standby",
+        "transitions": [
+          { "from": "Standby", "to": "Normal" },
+          { "from": "Normal", "to": "FailureDetected", "trigger": "failure detected" },
+          { "from": "FailureDetected", "to": "Reconfigured", "trigger": "control allocation updated" },
+          {
+            "from": "Reconfigured",
+            "to": "SafeLanding",
+            "trigger": "post-reconfiguration check",
+            "guard": "remainingMissionFeasible == false"
+          },
+          {
+            "from": "Reconfigured",
+            "to": "Normal",
+            "trigger": "post-reconfiguration check",
+            "guard": "remainingMissionFeasible == true"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ACT-SIM-FAILURE",
+      "kind": "ActionDefinition",
+      "name": "SingleFailureSimulationRun",
+      "owner": "FailureResilienceMini",
+      "properties": {
+        "description": "单桨失效注入仿真：核验高度损失与姿态误差。",
+        "inputs": [
+          { "name": "failedRotorIndex", "typeRef": "Integer" },
+          { "name": "flightCondition", "typeRef": "String" }
+        ],
+        "outputs": [
+          { "name": "altitudeLoss", "typeRef": "Real", "unit": "m" },
+          { "name": "attitudeError", "typeRef": "Real", "unit": "deg" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-FAIL-SAFE",
+          "rationale": "系统级仿真核验父需求的安全判据。"
+        }
+      ]
+    }
+  ]
+}

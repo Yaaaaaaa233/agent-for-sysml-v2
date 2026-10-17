@@ -14,6 +14,7 @@ from _support import (
     GOLDEN_IR,
     GOLDEN_SYSML,
     REPO_ROOT,
+    element,
     generate_sysml,
     golden_model,
     load_model,
@@ -54,15 +55,81 @@ class TestGoldenArtifacts(unittest.TestCase):
         result = query_model(golden_model(), unsatisfied_requirements=True)
         self.assertEqual(result["count"], 0, msg=result["results"])
 
-    def test_golden_covers_all_six_kinds_except_behavior(self):
-        """T4 约定：需求 + 结构 + 参数齐全；行为（StateDefinition）留空位给二期。"""
+    def test_golden_covers_all_eight_kinds_including_behavior(self):
+        """T4 + v1 增补 + 二期：8 种 kind 全齐（含行为 StateDefinition，恰好 1 个）。"""
         kinds = {e["kind"] for e in golden_model()["elements"]}
         self.assertIn("Requirement", kinds)
         self.assertIn("PartDefinition", kinds)
         self.assertIn("PartUsage", kinds)
         self.assertIn("Attribute", kinds)
         self.assertIn("ActionDefinition", kinds)
-        self.assertNotIn("StateDefinition", kinds)
+        self.assertIn("Constraint", kinds)
+        self.assertIn("Connection", kinds)
+        self.assertIn("StateDefinition", kinds)
+        states = [e for e in golden_model()["elements"] if e["kind"] == "StateDefinition"]
+        self.assertEqual(len(states), 1, msg="行为元素应恰好 1 个")
+
+    def test_golden_state_machine_follows_antipattern_16(self):
+        """行为元素的形态：初始态出边不挂 trigger/guard，事件迁移从非初始态出发。"""
+        state = [e for e in golden_model()["elements"] if e["kind"] == "StateDefinition"][0]
+        props = state["properties"]
+        states = props["states"]
+        initial = props["initial"]
+        self.assertIn(initial, states)
+        self.assertGreaterEqual(len(states), 4, msg="状态数太少：%s" % states)
+        self.assertGreaterEqual(len(props["transitions"]), 4)
+        for index, transition in enumerate(props["transitions"]):
+            self.assertIn(transition["from"], states)
+            self.assertIn(transition["to"], states)
+            if transition["from"] == initial:
+                self.assertNotIn("trigger", transition, msg="初始态出边不得挂 trigger")
+                self.assertNotIn("guard", transition, msg="初始态出边不得挂 guard")
+            else:
+                self.assertTrue(
+                    transition.get("trigger") or transition.get("guard"),
+                    msg="非初始态迁移 %d 至少要有 trigger 或 guard" % index,
+                )
+
+    def test_golden_state_machine_guard_uses_formal_if(self):
+        """guard 走正式 `if (...)` 语句，而不是注释。"""
+        text = GOLDEN_SYSML.read_text(encoding="utf-8")
+        self.assertIn("state def FlightModeStates {", text)
+        self.assertIn("entry; then Takeoff;", text)
+        self.assertRegex(text, r"transition \w+ first Cruise if \([^)]*\) then Fault;")
+
+    def test_golden_includes_constraint_demo(self):
+        """Constraint 示范：续航换算公式 + 参数全部指向已有 Attribute。"""
+        model = golden_model()
+        constraint = element(model, "CONSTRAINT-ENDURANCE-BUDGET")
+        self.assertEqual(constraint["kind"], "Constraint")
+        self.assertIn("cruisePowerW", constraint["properties"]["expression"])
+        attributes = {
+            e["id"] for e in model["elements"] if e["kind"] == "Attribute"
+        }
+        self.assertTrue(constraint["properties"]["parameters"])
+        for parameter in constraint["properties"]["parameters"]:
+            self.assertIn(parameter, attributes)
+
+    def test_golden_includes_connection_demo(self):
+        """Connection 示范：电池→电调（electrical）、上桨电机→上桨（mechanical）。"""
+        model = golden_model()
+        connections = [e for e in model["elements"] if e["kind"] == "Connection"]
+        self.assertEqual(len(connections), 2)
+        flows = {c["properties"]["flowKind"] for c in connections}
+        self.assertEqual(flows, {"electrical", "mechanical"})
+        text = GOLDEN_SYSML.read_text(encoding="utf-8")
+        self.assertIn("connect batteryPack to escUnit;", text)
+        self.assertIn("connect upperMotor to upperPropeller;", text)
+
+    def test_golden_readme_counts_match_ir(self):
+        """README 的元素/关系计数必须与 IR 实际一致（防止增补后文档漂移）。"""
+        model = golden_model()
+        elements = len(model["elements"])
+        relations = sum(len(e.get("relations") or []) for e in model["elements"])
+        readme = (GOLDEN_DIR / "README.md").read_text(encoding="utf-8")
+        self.assertIn("%d 个元素" % elements, readme)
+        self.assertIn("%d 条关系" % relations, readme)
+        self.assertIn("%d/%d 元素匹配" % (elements, elements), readme)
 
     def test_golden_power_chain_is_complete(self):
         """电池 → 电调 → 电机 → 桨（含上下桨）四级都在，且用 connects 串起来。"""

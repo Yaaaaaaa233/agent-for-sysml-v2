@@ -1,0 +1,60 @@
+# 第 6 步：export_simulink（变更后参数表）
+#
+# 等价命令行：
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python -m tools.export \
+#     docs/demo/run-phase2-change/step3-patched.ir.json --fmt md --scope all
+
+ok = True  rows = 18  notes = 5
+errors = []
+
+===== 6.1 巡航续航阈值行（应体现 5.0）=====
+[
+  {
+    "path": "CoaxialOctoRotor.CruiseEndurance",
+    "name": "minEnduranceHours",
+    "valueType": "Real",
+    "unit": "",
+    "defaultValue": 5.0,
+    "kind": "RequirementThreshold",
+    "id": "REQ-CRUISE-ENDURANCE"
+  }
+]
+
+===== 6.2 CSV 里的同一行 =====
+CoaxialOctoRotor.CruiseEndurance,minEnduranceHours,Real,,5.0,RequirementThreshold,REQ-CRUISE-ENDURANCE,"{""note"":""需求阈值，非部件参数""}"
+
+===== 6.3 Markdown 参数表（fmt=md, scope=all）=====
+| path | name | valueType | unit | defaultValue | kind | id | extra |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CoaxialOctoRotor.BatteryPack | batteryCapacityWh | Real | Wh | 1200.0 | Attribute | ATTR-BATTERY-CAPACITY |  |
+| CoaxialOctoRotor.BatteryPack | usableEnergyFraction | Real |  | 0.8 | Attribute | ATTR-USABLE-FRACTION |  |
+| CoaxialOctoRotor.BrushlessMotor | motorEfficiency | Real |  | 0.85 | Attribute | ATTR-MOTOR-EFFICIENCY |  |
+| CoaxialOctoRotor.CoaxialOctoRotorSystem | cruiseSpeed | Real | m/s | 15.0 | Attribute | ATTR-CRUISE-SPEED |  |
+| CoaxialOctoRotor.CoaxialOctoRotorSystem | speedRatioEta | Real |  | 1.0 | Attribute | ATTR-SPEED-RATIO |  |
+| CoaxialOctoRotor.CruiseEndurance | minEnduranceHours | Real |  | 5.0 | RequirementThreshold | REQ-CRUISE-ENDURANCE | {"note":"需求阈值，非部件参数"} |
+| CoaxialOctoRotor.CruisePowerBudget | batteryDeratingFactor | Real |  | 0.9 | RequirementThreshold | REQ-POWER-BUDGET | {"note":"需求阈值，非部件参数"} |
+| CoaxialOctoRotor.CruisePowerBudget | maxCruisePowerW | Real |  | 260.0 | RequirementThreshold | REQ-POWER-BUDGET | {"note":"需求阈值，非部件参数"} |
+| CoaxialOctoRotor.ElectronicSpeedController | escEfficiency | Real |  | 0.95 | Attribute | ATTR-ESC-EFFICIENCY |  |
+| CoaxialOctoRotor.MissionEndurance | minLandingReserveFraction | Real |  | 0.15 | RequirementThreshold | REQ-MISSION-ENDURANCE | {"note":"需求阈值，非部件参数"} |
+| CoaxialOctoRotor.MissionEndurance | minMissionDurationHours | Real |  | 5.0 | RequirementThreshold | REQ-MISSION-ENDURANCE | {"note":"需求阈值，非部件参数"} |
+| CoaxialOctoRotor.PowerChain | EnduranceBudget |  |  | T = batteryCapacityWh * usableEnergyFraction / cruisePowerW | Constraint | CONSTRAINT-ENDURANCE-BUDGET | {"parameters":["batteryCapacityWh","usableEnergyFraction","cruisePowerW","enduranceHours"]} |
+| CoaxialOctoRotor.PowerChain | cruisePowerW | Real | W | 240.0 | Attribute | ATTR-CRUISE-POWER |  |
+| CoaxialOctoRotor.PowerChain | enduranceHours | Real | h | 4.0 | Attribute | ATTR-ENDURANCE |  |
+| CoaxialOctoRotor.PowerChain | propellerEfficiency | Real |  | 0.72 | Attribute | ATTR-PROP-EFFICIENCY |  |
+| CoaxialOctoRotor.RotorSpeedRatioBand | maxRotorSpeedRpm | Real |  | 6200.0 | RequirementThreshold | REQ-ROTOR-SPEED-RATIO | {"note":"需求阈值，非部件参数"} |
+| CoaxialOctoRotor.RotorSpeedRatioBand | maxSpeedRatio | Real |  | 1.25 | RequirementThreshold | REQ-ROTOR-SPEED-RATIO | {"note":"需求阈值，非部件参数"} |
+| CoaxialOctoRotor.RotorSpeedRatioBand | minSpeedRatio | Real |  | 0.75 | RequirementThreshold | REQ-ROTOR-SPEED-RATIO | {"note":"需求阈值，非部件参数"} |
+
+
+===== 6.4 notes =====
+[
+  "RequirementThreshold 行是需求阈值，非部件参数；应作为仿真判据 / 校核条件使用。",
+  "导出范围 scope=all，格式 fmt=md。",
+  "参数值直接取自 IR 的 defaultValue，可能仍是占位值（非实测结论）；用于仿真前须与选型数据或实测数据核对。",
+  "Markdown 表供人工评审与文档引用；机器消费请改用 fmt=\"csv\" 或 fmt=\"json\"。",
+  "单元格中的换行以 `<br>` 表示、`|` 已转义；Constraint 行的公式在 defaultValue 列，参数列表在 extra 列。"
+]
+
+⚠️ 表中数值全部是占位值（1200 Wh / 240 W / 0.95 / 0.85 / 0.72 / 5.0 h），
+不是实测结论；export_simulink 只把 IR 里的 defaultValue 透传出来，不判断物理合理性。
+

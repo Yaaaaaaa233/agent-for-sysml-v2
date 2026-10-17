@@ -7,6 +7,7 @@ kind 枚举自创 / 数值字段写成字符串 / typeRef 悬空。
 
 from __future__ import annotations
 
+import copy
 import unittest
 
 from _support import (
@@ -14,6 +15,7 @@ from _support import (
     codes,
     edit_element,
     element,
+    extended_model,
     golden_model,
     mutate,
     validate_model_json,
@@ -118,7 +120,8 @@ class TestRejectedModels(unittest.TestCase):
 
     # --- 4. kind 枚举自创 -----------------------------------------------------------------
     def test_reject_invented_kind(self):
-        model = edit_element(base_model(), "ACT-A", lambda e: e.__setitem__("kind", "Constraint"))
+        # 注：Constraint 自 v1 增补起已是合法 kind，因此自创值改用 BogusKind。
+        model = edit_element(base_model(), "ACT-A", lambda e: e.__setitem__("kind", "BogusKind"))
         self.assertRejected(model, "E-KIND-INVALID")
 
     def test_reject_invented_relation_type(self):
@@ -283,6 +286,196 @@ class TestWarnings(unittest.TestCase):
         result = validate_model_json(model)
         self.assertTrue(result["ok"], msg=codes(result))
         self.assertIn("W-PROP-UNIT-OBJECT", codes(result, "warnings"))
+
+
+class TestNewKindsValidation(unittest.TestCase):
+    """v1 增补的 Constraint / Connection：正例 + 每条语义规则的反例。"""
+
+    def assertRejected(self, model, expected_code: str):
+        result = validate_model_json(model)
+        self.assertFalse(result["ok"], msg="本该被拒绝却通过了：%s" % model)
+        self.assertIn(expected_code, codes(result), msg="错误码不对：%s" % codes(result))
+        return result
+
+    def test_extended_model_is_clean_and_zero_warning(self):
+        """新 kind 的基准模型：ok 且零 warning（证明没触发 W-ELEMENT-ORPHAN 等旧规则）。"""
+        result = validate_model_json(extended_model())
+        self.assertTrue(result["ok"], msg=codes(result))
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(result["warnings"], [])
+
+    def test_json_schema_layer_accepts_new_kinds(self):
+        """JSON Schema（第二层）与新 kind 的 properties 定义必须一致。"""
+        result = validate_model_json(extended_model(), use_json_schema=True)
+        self.assertTrue(result["ok"], msg=codes(result))
+        self.assertNotIn("E-SCHEMA", codes(result))
+
+    # --- Constraint -------------------------------------------------------------------
+    def test_reject_constraint_without_expression(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].pop("expression"),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-NO-EXPRESSION")
+
+    def test_reject_constraint_with_blank_expression(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("expression", "   "),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-NO-EXPRESSION")
+
+    def test_reject_constraint_with_multiline_expression(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("expression", "T = a\n  / b"),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-EXPR-MULTILINE")
+
+    def test_reject_constraint_without_parameters(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].pop("parameters"),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-PARAMS-INVALID")
+
+    def test_reject_constraint_with_empty_parameters(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("parameters", []),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-PARAMS-INVALID")
+
+    def test_reject_constraint_parameter_that_is_not_an_id_string(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("parameters", [42]),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-PARAMS-INVALID")
+
+    def test_reject_dangling_constraint_parameter(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("parameters", ["ATTR-NOPE"]),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-PARAM-DANGLING")
+
+    def test_reject_constraint_parameter_pointing_to_non_attribute(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("parameters", ["PART-USE-MOTOR"]),
+        )
+        self.assertRejected(model, "E-CONSTRAINT-PARAM-WRONGKIND")
+
+    def test_reject_constraint_description_wrong_type(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("description", 42),
+        )
+        self.assertRejected(model, "E-PROP-TYPE")
+
+    def test_reject_unknown_constraint_property(self):
+        model = edit_element(
+            extended_model(),
+            "CONSTRAINT-ENDURANCE",
+            lambda e: e["properties"].__setitem__("formula", "T = 1"),
+        )
+        self.assertRejected(model, "E-PROP-UNKNOWN")
+
+    # --- Connection -------------------------------------------------------------------
+    def test_reject_connection_without_source_ref(self):
+        model = edit_element(
+            extended_model(), "CONN-MOTOR-ESC", lambda e: e["properties"].pop("sourceRef")
+        )
+        self.assertRejected(model, "E-PROP-REQUIRED")
+
+    def test_reject_connection_without_flow_kind(self):
+        model = edit_element(
+            extended_model(), "CONN-MOTOR-ESC", lambda e: e["properties"].pop("flowKind")
+        )
+        self.assertRejected(model, "E-PROP-REQUIRED")
+
+    def test_reject_connection_without_target_ref(self):
+        model = edit_element(
+            extended_model(), "CONN-MOTOR-ESC", lambda e: e["properties"].pop("targetRef")
+        )
+        self.assertRejected(model, "E-PROP-REQUIRED")
+
+    def test_reject_connection_with_invented_flow_kind(self):
+        model = edit_element(
+            extended_model(),
+            "CONN-MOTOR-ESC",
+            lambda e: e["properties"].__setitem__("flowKind", "magic"),
+        )
+        self.assertRejected(model, "E-ENUM-INVALID")
+
+    def test_reject_dangling_connection_endpoint(self):
+        model = edit_element(
+            extended_model(),
+            "CONN-MOTOR-ESC",
+            lambda e: e["properties"].__setitem__("sourceRef", "PART-USE-NOPE"),
+        )
+        self.assertRejected(model, "E-CONNECTION-ENDPOINT-DANGLING")
+
+    def test_reject_connection_endpoint_pointing_to_non_part_usage(self):
+        model = edit_element(
+            extended_model(),
+            "CONN-MOTOR-ESC",
+            lambda e: e["properties"].__setitem__("sourceRef", "PART-DEF-MOTOR"),
+        )
+        self.assertRejected(model, "E-CONNECTION-ENDPOINT-WRONGKIND")
+
+    def test_reject_connection_with_identical_endpoints(self):
+        model = edit_element(
+            extended_model(),
+            "CONN-MOTOR-ESC",
+            lambda e: e["properties"].__setitem__("targetRef", "PART-USE-MOTOR"),
+        )
+        self.assertRejected(model, "E-CONNECTION-SELF")
+
+    def test_reject_connection_endpoint_owned_by_someone_else(self):
+        """端点必须与 Connection 同 owner：把端点挪到另一个 owner 下即报错。"""
+        model = extended_model()
+        for item in model["elements"]:
+            if item["id"] == "PART-USE-MOTOR":
+                item["owner"] = "PART-DEF-MOTOR"
+        self.assertRejected(model, "E-CONNECTION-OWNER-MISMATCH")
+
+    def test_reject_duplicate_connection_triple(self):
+        model = extended_model()
+        duplicate = copy.deepcopy(
+            next(e for e in model["elements"] if e["id"] == "CONN-MOTOR-ESC")
+        )
+        duplicate["id"] = "CONN-MOTOR-ESC-COPY"
+        duplicate["name"] = "motorToEscCopy"
+        model["elements"].append(duplicate)
+        self.assertRejected(model, "E-CONNECTION-DUP")
+
+    def test_reject_connection_endpoint_wrong_type(self):
+        model = edit_element(
+            extended_model(),
+            "CONN-MOTOR-ESC",
+            lambda e: e["properties"].__setitem__("sourceRef", 3),
+        )
+        self.assertRejected(model, "E-PROP-TYPE")
+
+    def test_unknown_kind_is_still_rejected(self):
+        """增补不放松受控枚举：Port / Interface 之类仍必须被拒。"""
+        model = edit_element(
+            extended_model(),
+            "CONN-MOTOR-ESC",
+            lambda e: e.__setitem__("kind", "Port"),
+        )
+        self.assertRejected(model, "E-KIND-INVALID")
 
 
 class TestErrorShape(unittest.TestCase):

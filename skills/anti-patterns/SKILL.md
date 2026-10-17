@@ -65,7 +65,7 @@ metadata:
 | --- | --- |
 | **现象** | 把 `P = U·I`、`T = E/P` 这种物理公式或「额定电压 24 V」建成 `Requirement`。 |
 | **为什么错** | 需求是「**要做到什么**」，公式和常量是「**世界是怎样的**」。混在一起的后果很具体：追溯矩阵里会出现一条**永远不会失败的需求**（因为它在任何设计下都成立），评审时一条就能问倒你；而且需求条目被稀释，真正的约束反而被淹没。 |
-| **正确做法** | 物理关系 → `Attribute`（公式写进 `description`）；固有值 → `Attribute` + `defaultValue`；只有带「不低于 / 不大于 / 必须」的门槛才建 `Requirement`。判据口诀：**「换个设计会不会变」——会变是需求，不会变是参数。** |
+| **正确做法** | 物理关系 → `Constraint`（**v1 增补 kind**，已支持：公式进单行 `expression`，符号对应的量建 `Attribute`、id 列进 `parameters`）；固有值 → `Attribute` + `defaultValue`；只有带「不低于 / 不大于 / 必须」的门槛才建 `Requirement`。老工具版本还没收录 `Constraint` 时，才退回把公式写进 `Attribute.description`。判据口诀：**「换个设计会不会变」——会变是需求，不会变是参数/约束。** |
 | **校验响应** | 校验**不会报错**（结构合法）——这条正是方案 10.1 说的「validate 只抓结构错误，不抓建模质量错误」。靠本清单 + 人工评审拦。 |
 
 ## 6. 功率链漏掉电调（以及任何「少一环」）
@@ -99,9 +99,9 @@ metadata:
 
 | | |
 | --- | --- |
-| **现象** | 建 `"kind": "Constraint"`、`"kind": "Port"`、`"kind": "Interface"`，或 `"type": "derives"`、`"type": "implements"`。 |
+| **现象** | 建 `"kind": "Port"`、`"kind": "Interface"`、`"kind": "Requirement2"`，或 `"type": "derives"`、`"type": "implements"`。 |
 | **为什么错** | 受控枚举是方案 4.3「宁窄勿宽」的地基：**kind 一多，渲染模板、校验规则、选型决策树跟着膨胀，模型选错的概率成倍上升**。而且自创的种类渲染器不认识，文本里会冒出一个我们不负责的东西。 |
-| **正确做法** | 只用这 6 种 kind：`PartDefinition` / `PartUsage` / `Requirement` / `ActionDefinition` / `StateDefinition` / `Attribute`；只用这 5 种关系：`refines` / `satisfiedBy` / `decomposes` / `verifies` / `connects`。确实需要新的（比如 `Constraint`）→ **走方案 9.2 的二期流程加一种**，并同步补渲染模板、测试与反模式，而不是当场自创。 |
+| **正确做法** | 只用这 8 种 kind：`PartDefinition` / `PartUsage` / `Requirement` / `ActionDefinition` / `StateDefinition` / `Attribute` / `Constraint` / `Connection`（后两种是 **v1 增补 kind**，已收录，**不算自创**）；只用这 5 种关系：`refines` / `satisfiedBy` / `decomposes` / `verifies` / `connects`。确实需要第 9 种 → **走方案 9.2 的流程加一种**，并同步补渲染模板、测试与反模式，而不是当场自创。 |
 | **校验响应** | `E-KIND-INVALID`；关系类型 → `E-REL-TYPE-INVALID`。 |
 
 ## 10. 需求没有 satisfiedBy / 标了 verifyMethod 却没有验证链

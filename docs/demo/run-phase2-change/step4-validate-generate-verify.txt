@@ -1,0 +1,74 @@
+# 第 4 步：变更后 validate → generate → verify（含 official）
+#
+# 等价命令行：
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python mcp-server/run_server.py --call validate_model_json \
+#     --model-file docs/demo/run-phase2-change/step3-patched.ir.json
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python mcp-server/run_server.py --call generate_sysml \
+#     --model-file docs/demo/run-phase2-change/step3-patched.ir.json
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python mcp-server/run_server.py --call verify_sysml \
+#     --text "$(cat docs/demo/run-phase2-change/step4-changed.sysml)" \
+#     --model-file docs/demo/run-phase2-change/step3-patched.ir.json \
+#     --input '{"official": true}'
+
+===== validate_model_json =====
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "schemaLayer": "ok(+0)"
+}
+
+===== generate_sysml =====
+ok      = True
+sha256  = 06fbfb5af8cfbbc50114cec1a863cf9952633d9dab7a161fed3e60b2f7f77b46
+stats   = {
+  "package": "CoaxialOctoRotor",
+  "elements": 34,
+  "byKind": {
+    "PartDefinition": 7,
+    "PartUsage": 8,
+    "Requirement": 4,
+    "ActionDefinition": 2,
+    "StateDefinition": 1,
+    "Attribute": 9,
+    "Constraint": 1,
+    "Connection": 2
+  },
+  "relations": 20,
+  "lines": 213,
+  "chars": 9811
+}
+（文本已落盘为 step4-changed.sysml，chars=9811，sha256=06fbfb5af8cfbbc50114cec1a863cf9952633d9dab7a161fed3e60b2f7f77b46）
+
+===== verify_sysml（内置 lint + 元素级比对）=====
+{
+  "ok": true,
+  "counts": {
+    "irElements": 34,
+    "textDeclarations": 58,
+    "matched": 34,
+    "missing": 0,
+    "extra": 0,
+    "mismatched": 0,
+    "lintErrors": 0
+  },
+  "missing": [],
+  "extra": [],
+  "mismatched": []
+}
+
+===== verify_sysml(official=true) 的 official 键 =====
+{
+  "ok": true,
+  "official": {
+    "ok": true,
+    "backend": "pilot-implementation",
+    "status": "available",
+    "diagnostics": [],
+    "detail": "命令：<repo>/docs/probe-official-parser/jre/Contents/Home/bin/java -Xmx1024m -Djava.awt.headless=true -cp <repo>/docs/probe-official-parser/kernel/jupyter-sysml-kernel-0.62.0-all.jar org.omg.sysml.interactive.SysMLInteractive <repo>/docs/probe-official-parser/kernel/sysml.library；官方实现未报错（退出码 0）。"
+  }
+}
+
+口径：上面 official 只说明「语法与引用解析」被官方 Pilot Implementation 接受，
+语义/建模质量未验证；内置 lint + 元素级比对与官方结果分别标注，互不冒充。
+

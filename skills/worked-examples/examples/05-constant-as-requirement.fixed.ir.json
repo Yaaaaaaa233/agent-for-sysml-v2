@@ -1,0 +1,83 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "ConstantDemo",
+  "meta": {
+    "title": "范例 5（先错后改·改后）：常量回到 Attribute，悬空引用接上，阈值写成数字",
+    "note": "改后模型：0 error。所有数值均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-BATTERY",
+      "kind": "PartDefinition",
+      "name": "BatteryPack",
+      "owner": "ConstantDemo",
+      "properties": {
+        "description": "动力锂电池包。"
+      }
+    },
+    {
+      "id": "PART-USE-BATTERY",
+      "kind": "PartUsage",
+      "name": "batteryPack",
+      "owner": "ConstantDemo",
+      "properties": {
+        "typeRef": "PART-DEF-BATTERY",
+        "quantity": 1
+      }
+    },
+    {
+      "id": "ATTR-NOMINAL-VOLTAGE",
+      "kind": "Attribute",
+      "name": "nominalVoltageV",
+      "owner": "PART-DEF-BATTERY",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 24.0,
+        "unit": "V",
+        "description": "电池包额定电压。固有常量，不是需求。占位值。"
+      }
+    },
+    {
+      "id": "REQ-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "owner": "ConstantDemo",
+      "properties": {
+        "text": "巡航时间不低于 4 小时。",
+        "acceptanceCriteria": "满电续航 T >= 4.0 h（占位值）。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "minEnduranceHours": 4.0
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-BATTERY",
+          "rationale": "续航由电池可用能量保障；引用的是模型里真实存在的用法。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "ConstantDemo",
+      "properties": {
+        "description": "续航仿真工况。",
+        "inputs": [
+          { "name": "cruiseSpeed", "typeRef": "Real", "unit": "m/s" }
+        ],
+        "outputs": [
+          { "name": "enduranceHours", "typeRef": "Real", "unit": "h" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-ENDURANCE",
+          "rationale": "用仿真验证续航阈值。"
+        }
+      ]
+    }
+  ]
+}

@@ -16,6 +16,13 @@ metadata:
 **一句话：顺序不能乱。** 先查现状 → 再填 JSON → 校验 → 生成 → 回验 → 汇报。
 跳过任何一步都会以某种方式回来找你（造重复元素、引用悬空、文本与模型不一致）。
 
+**工具清单（8 个）**：主链按下面顺序调用——`query_model`（查现状）→
+`validate_model_json`（校验）→ `generate_sysml`（生成文本）→ `verify_sysml`（回验）；
+配套工具按需插入——`patch_model`（按 id 增量编辑，改完必须回第 7 步重新校验）→
+`traceability`（追溯矩阵 / 缺口 / 影响面）→ `parse_sysml`（SysML 文本解析导入）→
+`export_simulink`（参数表导出）。配套工具用在对应步骤上，
+**不要用它们绕开 SOP**（例如用 `patch_model` 改完不重新校验）。
+
 ## 用法
 
 1. 判断用户这次要的是哪一类动作（见 §0 分流）。
@@ -124,14 +131,16 @@ metadata:
 - **输入**：第 5 步的结构 + 第 1 步的验收判据。
 - **动作**：
   - 性能指标建成 `Attribute`：`valueType` + `defaultValue` + `unit` **三件套**。
-  - 公式写进该 `Attribute` 的 `description`（MVP 的 IR 还没有正式的 `Constraint` 元素，
-    它属于二期；**别为了放公式去自创 kind**）。
+  - 物理公式 / 恒等关系建成 `Constraint`（**v1 增补 kind**，已支持）：`expression` 写单行公式，
+    `parameters` 列出公式里用到的 `Attribute` id（**先建参数，再建约束**）。老工具版本还没收录
+    `Constraint` 时，才退回写进该 `Attribute` 的 `description`——**别为了放公式去自创 kind**。
   - 需求里的阈值放进该 `Requirement` 的 `properties`，**必须是数字**。
-- **产出**：`Attribute` 元素 + 需求上的数值阈值字段。
+- **产出**：`Attribute` 元素 + `Constraint` 元素（可选）+ 需求上的数值阈值字段。
 - **自检**：
   - [ ] 每个量都是**数字 + 独立 unit 字段**吗？（写成 `"4 小时"` 会报 `E-PROP-THRESHOLD-STRING`）
   - [ ] `defaultValue` 的类型和 `valueType` 对得上吗？（`Real` 配数字、`Boolean` 配布尔……）
-  - [ ] 我是不是把「物理上必然成立的关系」写成了需求？（那应该是个参数/公式，见 `element-choice`）
+  - [ ] 我是不是把「物理上必然成立的关系」写成了需求？（那是 `Constraint`，见 `element-choice` 案例 2）
+  - [ ] 如果建了 `Constraint`：`expression` 是**单行**吗？`parameters` 里的每个 id 都指向**已存在的 `Attribute`** 吗？
 
 ## 第 7 步：校验 —— 改到没有 error
 
@@ -148,18 +157,24 @@ metadata:
 
 ## 第 8 步：追溯检查 —— 确认没有孤立与断链
 
-> MVP 尚未提供独立的 `traceability` 工具（方案 9.2 的 T9，二期）。MVP 用 `query_model` 等价执行。
+> `traceability` 工具**已实现**（需求矩阵 / 缺口 / 影响面）。追溯检查**先用它拿到全局视图**，
+> 再用 `query_model` 做单点复核——两者不是替代关系：`traceability` 回答「整个模型缺什么」，
+> `query_model` 回答「这个 id 被谁引用」。
 
 - **输入**：通过校验的 IR JSON。
 - **动作**：
-  - `query_model(unsatisfied_requirements=true)` → 没有 `satisfiedBy` 的需求列表；
-  - `query_model(referrers_of=<每个顶层元素>)` → 谁引用了它；
-  - `query_model(duplicates=true)` → 顺手再确认一次没重名。
-- **产出**：孤立需求清单 / 无人验证的功能清单 / 引用关系图。
+  - `traceability(model)` → 需求矩阵（`matrix`：每条需求的 `satisfiedBy` / `verifiedBy` 与四种状态）
+    + 缺口 `gaps`（`unsatisfied` / `unverified_requirement` / `unverified_action`）；
+  - `traceability(model, fmt="md")` → 可直接贴进报告的 Markdown 矩阵（`content`）；
+  - `traceability(model, focus=<id>)` → 「改这里会波及谁」的反向影响面（`impact`，BFS）；
+  - `query_model(unsatisfied_requirements=true)` / `query_model(referrers_of=<id>)`
+    → 单点复核某个元素（口径见 `anti-patterns` 14）。
+- **产出**：需求矩阵 + 缺口清单（未满足 / 未验证）+ 影响面。
 - **自检**：
-  - [ ] 「没人满足的需求」是空的吗？不是 → 回第 5 步补，或明确标注该需求**待定**并告诉用户。
-  - [ ] 每条需求都至少有一条 `verifies`（验证）关系吗？
-  - [ ] 我新建的元素，在追溯图上连得上吗？（孤立元素 = 白建）
+  - [ ] `traceability` 的 `gaps.unsatisfied` 是空的吗？不是 → 回第 5 步补 `satisfiedBy`，
+        或明确标注该需求**待定**并告诉用户。
+  - [ ] `gaps.unverified_requirement` 是空的吗？每条需求都至少有一条 `verifies`（验证）关系吗？
+  - [ ] 我新建的元素，在追溯图上连得上吗？（孤立元素 = 白建，用 `focus=<新id>` 看一眼影响面）
 
 ## 第 9 步：生成文本、回验、汇报
 
@@ -205,9 +220,9 @@ metadata:
 3 功能分解 ──每步问「这由什么完成」
 4 行为建模 ──「持续处于某状态+事件迁移」→ State；否则 Action
 5 结构建模 ──先 Definition 再 Usage；Usage 必带 typeRef；别漏链路环节
-6 参数约束 ──数字 + 独立 unit；公式放 description；自创 kind 是禁区
+6 参数约束 ──数字 + 独立 unit；公式进 Constraint（v1 增补）；自创 kind 是禁区
 7 校验 ──────validate_model_json，errors 清零，warnings 逐条读
-8 追溯检查 ──query_model(unsatisfied_requirements / referrers_of / duplicates)
+8 追溯检查 ──traceability（矩阵/缺口/影响面）+ query_model 单点复核
 9 生成汇报 ──generate_sysml → verify_sysml → 说清「产出了什么/为什么/待确认」+ 交付自检 5 条
 ```
 

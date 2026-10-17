@@ -1,0 +1,127 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "PowerChainMini",
+  "meta": {
+    "title": "模式 1：功率链最小骨架（占位值）",
+    "note": "上下桨各一条支路；数量均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "PowerChainMini",
+      "properties": { "description": "功率链整体。" }
+    },
+    {
+      "id": "PART-USE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "PowerChainMini",
+      "properties": { "typeRef": "PART-DEF-POWER-CHAIN", "quantity": 1 }
+    },
+    {
+      "id": "PART-DEF-BATTERY",
+      "kind": "PartDefinition",
+      "name": "BatteryPack",
+      "owner": "PowerChainMini",
+      "properties": { "description": "动力锂电池包。" }
+    },
+    {
+      "id": "PART-DEF-ESC",
+      "kind": "PartDefinition",
+      "name": "ElectronicSpeedController",
+      "owner": "PowerChainMini",
+      "properties": { "description": "电子调速器。" }
+    },
+    {
+      "id": "PART-DEF-MOTOR",
+      "kind": "PartDefinition",
+      "name": "BrushlessMotor",
+      "owner": "PowerChainMini",
+      "properties": { "description": "无刷电机。" }
+    },
+    {
+      "id": "PART-DEF-PROP",
+      "kind": "PartDefinition",
+      "name": "Propeller",
+      "owner": "PowerChainMini",
+      "properties": { "description": "螺旋桨。" }
+    },
+    {
+      "id": "PART-USE-BATTERY",
+      "kind": "PartUsage",
+      "name": "batteryPack",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": { "typeRef": "PART-DEF-BATTERY", "quantity": 1 },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USE-ESC",
+          "rationale": "电池母线向八路电调供电。"
+        }
+      ]
+    },
+    {
+      "id": "PART-USE-ESC",
+      "kind": "PartUsage",
+      "name": "escUnit",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": { "typeRef": "PART-DEF-ESC", "quantity": 8 },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USE-MOTOR-UPPER",
+          "rationale": "四路电调驱动上桨电机。"
+        },
+        {
+          "type": "connects",
+          "target": "PART-USE-MOTOR-LOWER",
+          "rationale": "四路电调驱动下桨电机。"
+        }
+      ]
+    },
+    {
+      "id": "PART-USE-MOTOR-UPPER",
+      "kind": "PartUsage",
+      "name": "upperMotor",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": { "typeRef": "PART-DEF-MOTOR", "quantity": 4 },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USE-PROP-UPPER",
+          "rationale": "上桨电机驱动上桨。"
+        }
+      ]
+    },
+    {
+      "id": "PART-USE-MOTOR-LOWER",
+      "kind": "PartUsage",
+      "name": "lowerMotor",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": { "typeRef": "PART-DEF-MOTOR", "quantity": 4 },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USE-PROP-LOWER",
+          "rationale": "下桨电机驱动下桨。"
+        }
+      ]
+    },
+    {
+      "id": "PART-USE-PROP-UPPER",
+      "kind": "PartUsage",
+      "name": "upperPropeller",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": { "typeRef": "PART-DEF-PROP", "quantity": 4 }
+    },
+    {
+      "id": "PART-USE-PROP-LOWER",
+      "kind": "PartUsage",
+      "name": "lowerPropeller",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": { "typeRef": "PART-DEF-PROP", "quantity": 4 }
+    }
+  ]
+}

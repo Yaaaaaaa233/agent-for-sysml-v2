@@ -2,9 +2,9 @@
   "schema": "sysml-ir/v1",
   "package": "CoaxialOctoRotor",
   "meta": {
-    "title": "共轴八旋翼（X8）功率链标杆案例骨架",
+    "title": "共轴八旋翼（X8）功率链标杆案例（需求 + 结构 + 参数 + 行为）",
     "source": "2610_MBSE 项目；《SysML建模智能体技术方案》7.3 标杆案例",
-    "note": "T4 范围：需求 + 结构 + 参数。行为（StateDefinition 状态机）留空位，二期补。参数公式以 Attribute.description 承载，正式 Constraint 元素列二期。"
+    "note": "T4 骨架范围：需求 + 结构 + 参数。二期补齐（2026-10-17）：行为——新增 1 个 StateDefinition（FlightModeStates 飞行模式状态机，5 状态 5 迁移）。v1 增补（2026-10-17）：Constraint（续航换算公式）与 Connection（电池→电调、上桨电机→上桨）。数值仍为占位示例值，非实测结论。"
   },
   "elements": [
     {
@@ -312,6 +312,30 @@
       }
     },
     {
+      "id": "CONN-BATTERY-ESC",
+      "kind": "Connection",
+      "name": "batteryToEsc",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USAGE-BATTERY",
+        "targetRef": "PART-USAGE-ESC",
+        "flowKind": "electrical",
+        "description": "电池直流母线馈入八路电调。"
+      }
+    },
+    {
+      "id": "CONN-UPPER-MOTOR-PROP",
+      "kind": "Connection",
+      "name": "upperMotorToPropeller",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USAGE-MOTOR-UPPER",
+        "targetRef": "PART-USAGE-PROP-UPPER",
+        "flowKind": "mechanical",
+        "description": "上桨电机把轴功率传给上桨。"
+      }
+    },
+    {
       "id": "ATTR-CRUISE-SPEED",
       "kind": "Attribute",
       "name": "cruiseSpeed",
@@ -379,6 +403,22 @@
         "defaultValue": 4.0,
         "unit": "h",
         "description": "续航换算：T = E_batt * usableEnergyFraction / P_cruise。代入 1200 Wh、0.8、240 W 得 T = 4.0 h，恰好满足 REQ-CRUISE-ENDURANCE 的下限。"
+      }
+    },
+    {
+      "id": "CONSTRAINT-ENDURANCE-BUDGET",
+      "kind": "Constraint",
+      "name": "EnduranceBudget",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "expression": "T = batteryCapacityWh * usableEnergyFraction / cruisePowerW",
+        "parameters": [
+          "ATTR-BATTERY-CAPACITY",
+          "ATTR-USABLE-FRACTION",
+          "ATTR-CRUISE-POWER",
+          "ATTR-ENDURANCE"
+        ],
+        "description": "续航换算约束：电池可用能量除以巡航功率得到续航时间。parameters 把公式里的符号绑定到 Attribute 元素；1200 Wh / 0.8 / 240 W / 4.0 h 均为占位示例值，非实测结论。"
       }
     },
     {
@@ -501,6 +541,44 @@
           "rationale": "在线优化的寻优结果交由续航仿真工况评价"
         }
       ]
+    },
+    {
+      "id": "STATE-FLIGHT-MODES",
+      "kind": "StateDefinition",
+      "name": "FlightModeStates",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "飞行模式状态机：初始态为起飞段，起飞爬升完成（完成迁移，不挂 trigger/guard）后转入巡航；巡航可被返航指令或转速比越界事件打断；返航与故障两条路径都以触地检测收束到降落完成态。guard 里的 0.75 是占位阈值（对应 REQ-ROTOR-SPEED-RATIO 的下限），非实测结论。",
+        "states": ["Takeoff", "Cruise", "ReturnToHome", "Fault", "Landed"],
+        "initial": "Takeoff",
+        "transitions": [
+          {
+            "from": "Takeoff",
+            "to": "Cruise"
+          },
+          {
+            "from": "Cruise",
+            "to": "ReturnToHome",
+            "trigger": "返航指令或任务段剩余时间不足"
+          },
+          {
+            "from": "Cruise",
+            "to": "Fault",
+            "trigger": "转速比越界或功率遥测持续异常",
+            "guard": "x8System.speedRatioEta <= 0.75"
+          },
+          {
+            "from": "ReturnToHome",
+            "to": "Landed",
+            "trigger": "触地检测（起落架受压）"
+          },
+          {
+            "from": "Fault",
+            "to": "Landed",
+            "trigger": "迫降完成（触地检测）"
+          }
+        ]
+      }
     }
   ]
 }

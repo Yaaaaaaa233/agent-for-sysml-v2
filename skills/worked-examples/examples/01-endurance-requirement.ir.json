@@ -1,0 +1,98 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "EnduranceDemo",
+  "meta": {
+    "title": "范例 1：可量化续航需求（占位值）",
+    "note": "所有数值均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "EnduranceDemo",
+      "properties": {
+        "description": "功率链整体：电池→电调→电机→桨。"
+      }
+    },
+    {
+      "id": "PART-USE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "EnduranceDemo",
+      "properties": {
+        "typeRef": "PART-DEF-POWER-CHAIN",
+        "quantity": 1,
+        "description": "本机唯一的一条功率链。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-POWER",
+      "kind": "Attribute",
+      "name": "cruisePowerW",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 240.0,
+        "unit": "W",
+        "description": "巡航稳态电功率 P_cruise。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-BATTERY-ENERGY",
+      "kind": "Attribute",
+      "name": "batteryUsableEnergyWh",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 960.0,
+        "unit": "Wh",
+        "description": "可用能量 E_usable = 1200 Wh × 0.8。占位值。"
+      }
+    },
+    {
+      "id": "REQ-CRUISE-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "owner": "EnduranceDemo",
+      "properties": {
+        "text": "巡航时间不低于 4 小时。",
+        "acceptanceCriteria": "在巡航速度 v 与转速比 eta 的稳态工作点下，满电续航时间 T >= 4.0 h。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "rationale": "续航是任务书的首要指标；阈值必须能被仿真判定。",
+        "minEnduranceHours": 4.0
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-POWER-CHAIN",
+          "rationale": "续航由功率链的可用能量与巡航功率共同决定。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "EnduranceDemo",
+      "properties": {
+        "description": "续航仿真工况：给定巡航速度与转速比，输出续航时间。",
+        "inputs": [
+          { "name": "cruiseSpeed", "typeRef": "Real", "unit": "m/s" },
+          { "name": "speedRatioEta", "typeRef": "Real" }
+        ],
+        "outputs": [
+          { "name": "enduranceHours", "typeRef": "Real", "unit": "h" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "用仿真工况验证续航阈值。"
+        }
+      ]
+    }
+  ]
+}

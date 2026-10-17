@@ -1,0 +1,96 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "PowerFormulaMini",
+  "meta": {
+    "title": "模式 2：功率公式的参数组织（Attribute 承载形态，占位值）",
+    "note": "所有数值均为占位值。正式 Constraint 元素是 v1 增补 kind，字段见 SKILL.md 模式 2。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "PowerFormulaMini",
+      "properties": { "description": "功率链整体。" }
+    },
+    {
+      "id": "PART-USE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "PowerFormulaMini",
+      "properties": { "typeRef": "PART-DEF-POWER-CHAIN", "quantity": 1 }
+    },
+    {
+      "id": "ATTR-BUS-VOLTAGE",
+      "kind": "Attribute",
+      "name": "busVoltageV",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 24.0,
+        "unit": "V",
+        "description": "母线电压 U_batt。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-CURRENT",
+      "kind": "Attribute",
+      "name": "cruiseCurrentA",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 10.0,
+        "unit": "A",
+        "description": "巡航电流 I_cruise。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-POWER",
+      "kind": "Attribute",
+      "name": "cruisePowerW",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 240.0,
+        "unit": "W",
+        "description": "P_cruise = U_batt × I_cruise（三者均为占位值）。公式不是需求。"
+      }
+    },
+    {
+      "id": "ATTR-ESC-EFF",
+      "kind": "Attribute",
+      "name": "escEfficiency",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.95,
+        "unit": "1",
+        "description": "电调效率 eta_esc。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-MOTOR-EFF",
+      "kind": "Attribute",
+      "name": "motorEfficiency",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.85,
+        "unit": "1",
+        "description": "电机效率 eta_motor。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-PROP-EFF",
+      "kind": "Attribute",
+      "name": "propellerEfficiency",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.72,
+        "unit": "1",
+        "description": "桨效率 eta_prop。占位值。"
+      }
+    }
+  ]
+}

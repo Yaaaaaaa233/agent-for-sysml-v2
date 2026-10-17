@@ -1,0 +1,157 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "EnduranceDecompositionMini",
+  "meta": {
+    "title": "模式 3：续航需求逐级分解（占位值）",
+    "note": "父需求靠子需求集体满足；每条子需求各自有判据、满足链与验证链。所有数值均为占位值。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "EnduranceDecompositionMini",
+      "properties": { "description": "功率链整体。" }
+    },
+    {
+      "id": "PART-USE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "EnduranceDecompositionMini",
+      "properties": { "typeRef": "PART-DEF-POWER-CHAIN", "quantity": 1 }
+    },
+    {
+      "id": "ATTR-BATTERY-ENERGY",
+      "kind": "Attribute",
+      "name": "batteryUsableEnergyWh",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 960.0,
+        "unit": "Wh",
+        "description": "可用能量 E_usable。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-POWER",
+      "kind": "Attribute",
+      "name": "cruisePowerW",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 240.0,
+        "unit": "W",
+        "description": "巡航功率 P_cruise。占位值。"
+      }
+    },
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "owner": "EnduranceDecompositionMini",
+      "properties": {
+        "text": "任务级续航：完成起飞、巡航与安全返航。",
+        "acceptanceCriteria": "标称任务剖面下全程可用飞行时间 T_mission >= 5.0 h（占位值）。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "minMissionDurationHours": 5.0
+      },
+      "relations": [
+        {
+          "type": "decomposes",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "任务剖面中最长的一段是巡航，单列为可验证子条。"
+        },
+        {
+          "type": "decomposes",
+          "target": "REQ-POWER-BUDGET",
+          "rationale": "能量侧分解：功率不越界才能保证时间指标。"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-POWER-CHAIN",
+          "rationale": "系统级满足方是整条功率链，不是虚设的「综合部件」。"
+        }
+      ]
+    },
+    {
+      "id": "REQ-CRUISE-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "owner": "EnduranceDecompositionMini",
+      "properties": {
+        "text": "巡航时间不低于 4 小时。",
+        "acceptanceCriteria": "稳态巡航工作点下，满电续航 T >= 4.0 h（占位值）。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "minEnduranceHours": 4.0
+      },
+      "relations": [
+        {
+          "type": "refines",
+          "target": "REQ-MISSION-ENDURANCE",
+          "rationale": "是父需求在巡航段上的更精确表述，同时作为并列子条之一。"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-POWER-CHAIN",
+          "rationale": "由功率链的可用能量与巡航功率满足。"
+        }
+      ]
+    },
+    {
+      "id": "REQ-POWER-BUDGET",
+      "kind": "Requirement",
+      "name": "CruisePowerBudget",
+      "owner": "EnduranceDecompositionMini",
+      "properties": {
+        "text": "巡航稳态电功率不超过 260 W。",
+        "acceptanceCriteria": "P_cruise <= 260 W（占位值）。",
+        "verifyMethod": "analysis",
+        "priority": "medium",
+        "maxCruisePowerW": 260.0
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-POWER-CHAIN",
+          "rationale": "由功率链选型与效率链满足。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "EnduranceDecompositionMini",
+      "properties": {
+        "description": "续航仿真工况：同时核验任务时间与巡航功率。",
+        "inputs": [
+          { "name": "cruiseSpeed", "typeRef": "Real", "unit": "m/s" },
+          { "name": "speedRatioEta", "typeRef": "Real" }
+        ],
+        "outputs": [
+          { "name": "enduranceHours", "typeRef": "Real", "unit": "h" },
+          { "name": "cruisePower", "typeRef": "Real", "unit": "W" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-MISSION-ENDURANCE",
+          "rationale": "同一工况可以核验任务级时间指标。"
+        },
+        {
+          "type": "verifies",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "同一工况可以核验巡航段续航。"
+        },
+        {
+          "type": "verifies",
+          "target": "REQ-POWER-BUDGET",
+          "rationale": "同一工况输出巡航功率，用于核验功率预算。"
+        }
+      ]
+    }
+  ]
+}

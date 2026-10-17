@@ -1,0 +1,129 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "OptimizationBandMini",
+  "meta": {
+    "title": "模式 5：在线优化决策量的约束区间（占位值）",
+    "note": "转速比区间与转速上限均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-X8",
+      "kind": "PartDefinition",
+      "name": "CoaxialOctoRotorSystem",
+      "owner": "OptimizationBandMini",
+      "properties": { "description": "共轴八旋翼整机。" }
+    },
+    {
+      "id": "PART-USE-X8",
+      "kind": "PartUsage",
+      "name": "x8System",
+      "owner": "OptimizationBandMini",
+      "properties": { "typeRef": "PART-DEF-X8", "quantity": 1 }
+    },
+    {
+      "id": "ATTR-ETA-MIN",
+      "kind": "Attribute",
+      "name": "minSpeedRatio",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.75,
+        "unit": "1",
+        "description": "转速比下界。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-ETA-MAX",
+      "kind": "Attribute",
+      "name": "maxSpeedRatio",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 1.25,
+        "unit": "1",
+        "description": "转速比上界。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-RPM-MAX",
+      "kind": "Attribute",
+      "name": "maxRotorSpeedRpm",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 6200.0,
+        "unit": "rpm",
+        "description": "桨转速上限。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-ETA-CMD",
+      "kind": "Attribute",
+      "name": "etaCmd",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 1.0,
+        "unit": "1",
+        "description": "寻优输出的转速比指令。占位值。"
+      }
+    },
+    {
+      "id": "CON-ETA-BAND",
+      "kind": "Constraint",
+      "name": "SpeedRatioBand",
+      "owner": "PART-DEF-X8",
+      "properties": {
+        "expression": "eta_min <= eta_cmd and eta_cmd <= eta_max",
+        "parameters": ["ATTR-ETA-MIN", "ATTR-ETA-MAX", "ATTR-ETA-CMD"],
+        "description": "区间约束；v1 增补 kind。占位值。"
+      }
+    },
+    {
+      "id": "REQ-ROTOR-SPEED-RATIO",
+      "kind": "Requirement",
+      "name": "RotorSpeedRatioBand",
+      "owner": "OptimizationBandMini",
+      "properties": {
+        "text": "在线寻优给出的转速比必须落在允许区间内。",
+        "acceptanceCriteria": "对任意寻优输出满足 0.75 <= eta <= 1.25（占位值），且桨转速 <= 6200 rpm（占位值）。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "minSpeedRatio": 0.75,
+        "maxSpeedRatio": 1.25,
+        "maxRotorSpeedRpm": 6200.0
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "ACT-ONLINE-OPT",
+          "rationale": "由在线寻优在求解时施加区间约束。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-ONLINE-OPT",
+      "kind": "ActionDefinition",
+      "name": "OnlinePowerOptimization",
+      "owner": "OptimizationBandMini",
+      "properties": {
+        "description": "在线功率寻优：输出受限的转速比与速度指令。",
+        "inputs": [
+          { "name": "powerTelemetry", "typeRef": "Real", "unit": "W" },
+          { "name": "airspeedEstimate", "typeRef": "Real", "unit": "m/s" }
+        ],
+        "outputs": [
+          { "name": "speedRatioCommand", "typeRef": "Real" },
+          { "name": "speedCommand", "typeRef": "Real", "unit": "m/s" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-ROTOR-SPEED-RATIO",
+          "rationale": "对寻优输出逐点检查区间约束。"
+        }
+      ]
+    }
+  ]
+}

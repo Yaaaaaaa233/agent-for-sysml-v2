@@ -1,0 +1,119 @@
+# 第 3 步：patch_model 做一次需求变更（3 个 update_element，原子应用）
+#
+# 变更内容：REQ-CRUISE-ENDURANCE 的 minEnduranceHours 4.0 → 5.0（占位变更），
+# 同步所有「提到 4.0 h」的字段（需求正文 / 验收判据 / 参数描述 / 约束描述）。
+#
+# 等价命令行：
+#   PYTHONPATH="$PWD/mcp-server" .venv/bin/python mcp-server/run_server.py --call patch_model \
+#     --model-file docs/demo/run-phase2-change/step1-imported.ir.json \
+#     --input "{\"ops\": $(cat docs/demo/run-phase2-change/step3-ops.json)}"
+
+===== ops（实际传入）=====
+[
+  {
+    "op": "update_element",
+    "id": "REQ-CRUISE-ENDURANCE",
+    "element": {
+      "id": "REQ-CRUISE-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "text": "巡航时间不低于 5 小时",
+        "acceptanceCriteria": "在巡航速度 v 与转速比 eta 的稳态工作点下，满电续航时间 T >= 5.0 h",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "rationale": "任务剖面的巡航段占主要时长，单列为可验证条目。",
+        "minEnduranceHours": 5.0
+      },
+      "relations": [
+        {
+          "type": "refines",
+          "target": "REQ-MISSION-ENDURANCE",
+          "rationale": "由任务级续航需求分解而来"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "PART-BATTERY-PACK",
+          "rationale": "由电池包可用能量与放电效率保障"
+        }
+      ]
+    }
+  },
+  {
+    "op": "update_element",
+    "id": "ATTR-ENDURANCE",
+    "element": {
+      "id": "ATTR-ENDURANCE",
+      "kind": "Attribute",
+      "name": "enduranceHours",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 4.0,
+        "unit": "h",
+        "description": "续航换算：T = E_batt * usableEnergyFraction / P_cruise。代入 1200 Wh、0.8、240 W 得 T = 4.0 h；需求下限已由 4.0 h 改为 5.0 h（占位变更），当前设计不再满足该下限，缺口由 traceability 暴露。"
+      }
+    }
+  },
+  {
+    "op": "update_element",
+    "id": "CONSTRAINT-ENDURANCE-BUDGET",
+    "element": {
+      "id": "CONSTRAINT-ENDURANCE-BUDGET",
+      "kind": "Constraint",
+      "name": "EnduranceBudget",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "description": "续航换算约束：电池可用能量除以巡航功率得到续航时间。parameters 把公式里的符号绑定到 Attribute 元素；1200 Wh / 0.8 / 240 W、换算结果 4.0 h 与需求下限 5.0 h 均为占位示例值，非实测结论。",
+        "expression": "T = batteryCapacityWh * usableEnergyFraction / cruisePowerW",
+        "parameters": [
+          "ATTR-BATTERY-CAPACITY",
+          "ATTR-USABLE-FRACTION",
+          "ATTR-CRUISE-POWER",
+          "ATTR-ENDURANCE"
+        ]
+      }
+    }
+  }
+]
+
+===== 返回 =====
+ok      = True
+errors  = []
+warnings= []
+
+diff（3 条）：
+[
+  {
+    "change": "~",
+    "kind": "element",
+    "id": "REQ-CRUISE-ENDURANCE",
+    "detail": "整体替换 `Requirement` `CruiseEndurance`（id=`REQ-CRUISE-ENDURANCE`）；变更字段：properties.acceptanceCriteria、properties.minEnduranceHours、properties.text。"
+  },
+  {
+    "change": "~",
+    "kind": "element",
+    "id": "ATTR-ENDURANCE",
+    "detail": "整体替换 `Attribute` `enduranceHours`（id=`ATTR-ENDURANCE`）；变更字段：properties.description。"
+  },
+  {
+    "change": "~",
+    "kind": "element",
+    "id": "CONSTRAINT-ENDURANCE-BUDGET",
+    "detail": "整体替换 `Constraint` `EnduranceBudget`（id=`CONSTRAINT-ENDURANCE-BUDGET`）；变更字段：properties.description。"
+  }
+]
+
+落盘：step3-patched.ir.json（sha256 58dbcfdcd6f8a09020a11b9314afe9c5065d7237de153aab6b343d5561c78844）
+变更后元素数 = 34，关系数 = 20（与变更前一致，补丁只改字段）
+
+变更后 REQ-CRUISE-ENDURANCE：
+{
+  "text": "巡航时间不低于 5 小时",
+  "acceptanceCriteria": "在巡航速度 v 与转速比 eta 的稳态工作点下，满电续航时间 T >= 5.0 h",
+  "verifyMethod": "simulation",
+  "priority": "high",
+  "rationale": "任务剖面的巡航段占主要时长，单列为可验证条目。",
+  "minEnduranceHours": 5.0
+}

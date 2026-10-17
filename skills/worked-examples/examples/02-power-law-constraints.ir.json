@@ -1,0 +1,119 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "PowerLawDemo",
+  "meta": {
+    "title": "范例 2：功率公式的约束组织（Constraint + Attribute，v1 增补 kind）",
+    "note": "Constraint 为 v1 增补 kind。所有数值均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "PowerLawDemo",
+      "properties": {
+        "description": "功率链：电池→电调→电机→桨。"
+      }
+    },
+    {
+      "id": "PART-USE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "PowerLawDemo",
+      "properties": {
+        "typeRef": "PART-DEF-POWER-CHAIN",
+        "quantity": 1
+      }
+    },
+    {
+      "id": "ATTR-BUS-VOLTAGE",
+      "kind": "Attribute",
+      "name": "busVoltageV",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 24.0,
+        "unit": "V",
+        "description": "母线电压 U_batt。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-CURRENT",
+      "kind": "Attribute",
+      "name": "cruiseCurrentA",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 10.0,
+        "unit": "A",
+        "description": "巡航电流 I_cruise。占位值。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-POWER",
+      "kind": "Attribute",
+      "name": "cruisePowerW",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 240.0,
+        "unit": "W",
+        "description": "巡航电功率 P_cruise = U_batt × I_cruise = 24 V × 10 A = 240 W（三者均为占位值）。"
+      }
+    },
+    {
+      "id": "CON-POWER-LAW",
+      "kind": "Constraint",
+      "name": "PowerLaw",
+      "owner": "PART-DEF-POWER-CHAIN",
+      "properties": {
+        "expression": "P_cruise = U_batt * I_cruise",
+        "parameters": ["ATTR-BUS-VOLTAGE", "ATTR-CRUISE-CURRENT", "ATTR-CRUISE-POWER"],
+        "description": "物理关系式，不是需求；v1 增补 kind。"
+      }
+    },
+    {
+      "id": "REQ-POWER-BUDGET",
+      "kind": "Requirement",
+      "name": "CruisePowerBudget",
+      "owner": "PowerLawDemo",
+      "properties": {
+        "text": "巡航稳态电功率不超过 260 W。",
+        "acceptanceCriteria": "P_cruise <= 260 W（占位阈值），且 P_cruise 由 U_batt × I_cruise 换算得到。",
+        "verifyMethod": "analysis",
+        "priority": "medium",
+        "maxCruisePowerW": 260.0
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-POWER-CHAIN",
+          "rationale": "功率预算由功率链的电压、电流与效率共同满足。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-POWER-AUDIT",
+      "kind": "ActionDefinition",
+      "name": "PowerBudgetAudit",
+      "owner": "PowerLawDemo",
+      "properties": {
+        "description": "按 P = U·I 核算巡航功率是否越界。",
+        "inputs": [
+          { "name": "busVoltage", "typeRef": "Real", "unit": "V" },
+          { "name": "cruiseCurrent", "typeRef": "Real", "unit": "A" }
+        ],
+        "outputs": [
+          { "name": "cruisePower", "typeRef": "Real", "unit": "W" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-POWER-BUDGET",
+          "rationale": "用参数核算动作验证功率预算。"
+        }
+      ]
+    }
+  ]
+}

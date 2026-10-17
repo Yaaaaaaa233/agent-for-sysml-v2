@@ -32,6 +32,8 @@ KINDS: Tuple[str, ...] = (
     "ActionDefinition",
     "StateDefinition",
     "Attribute",
+    "Constraint",
+    "Connection",
 )
 
 RELATION_TYPES: Tuple[str, ...] = (
@@ -57,6 +59,16 @@ VERIFY_METHODS: Tuple[str, ...] = (
 
 PRIORITIES: Tuple[str, ...] = ("high", "medium", "low")
 
+#: Connection.properties.flowKind 的受控枚举（方案 4.3 第 8 行）
+FLOW_KINDS: Tuple[str, ...] = (
+    "electrical",
+    "mechanical",
+    "data",
+    "thermal",
+    "fluid",
+    "generic",
+)
+
 #: 不同 kind 允许出现的 properties 子字段（受控白名单）
 ALLOWED_PROPS: Dict[str, Tuple[str, ...]] = {
     "PartDefinition": ("description", "isAbstract"),
@@ -73,6 +85,8 @@ ALLOWED_PROPS: Dict[str, Tuple[str, ...]] = {
     "ActionDefinition": ("inputs", "outputs", "description"),
     "StateDefinition": ("states", "initial", "transitions", "description"),
     "Attribute": ("valueType", "defaultValue", "unit", "description"),
+    "Constraint": ("expression", "parameters", "description"),
+    "Connection": ("sourceRef", "targetRef", "flowKind", "description"),
 }
 
 #: Requirement 中被视为「保留字符串字段」的名字；其余字段一律按阈值/参数校验
@@ -97,6 +111,11 @@ REQUIRED_PROPS: Dict[str, Tuple[str, ...]] = {
     "ActionDefinition": ("inputs", "outputs"),
     "StateDefinition": ("states",),
     "Attribute": ("valueType",),
+    # Constraint 的 expression / parameters 由 ``_check_constraint`` 统一处理，
+    # 以便对「缺失」与「空白」给出同一个语义错误码（E-CONSTRAINT-NO-EXPRESSION /
+    # E-CONSTRAINT-PARAMS-INVALID），而不是笼统的 E-PROP-REQUIRED。
+    "Constraint": (),
+    "Connection": ("sourceRef", "targetRef", "flowKind"),
 }
 
 _IDENT_RE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
@@ -385,6 +404,9 @@ def validate_model_json(
         pointer = "/elements/%d/properties" % index
         _check_properties(element_id, kind, properties, report, pointer, element_by_id)
 
+    # ---- 第三遍补充：Connection 三元组重复（跨元素） ---------------------------------
+    _check_connection_duplicates(elements, report)
+
     # ---- 第四遍：relations 数组与 target 存在 ----------------------------------------
     _check_relations(elements, element_by_id, kind_of, report, package)
 
@@ -608,6 +630,12 @@ def _check_properties(
     elif kind == "Attribute":
         _check_attribute(element_id, props, report, pointer)
 
+    elif kind == "Constraint":
+        _check_constraint(element_id, props, report, pointer, element_by_id)
+
+    elif kind == "Connection":
+        _check_connection(element_id, props, report, pointer, element_by_id)
+
 
 def _check_requirement(
     element_id: str,
@@ -688,8 +716,8 @@ def _check_requirement(
             else:
                 report.warn(
                     "W-PROP-UNIT-OBJECT",
-                    "阈值字段 `%s` 用了 {value, unit} 对象形式；MVP 渲染器会把它渲染成 "
-                    "`attribute %s : Real = ...;` 加单位注释。" % (field, field),
+                    "阈值字段 `%s` 用了 {value, unit} 对象形式；v1 渲染器会把它渲染成 "
+                    "`attribute %s : Real = ... [unit];`。" % (field, field),
                     element_id,
                     field_pointer,
                 )
@@ -849,6 +877,207 @@ def _check_attribute(
             element_id,
             pointer + "/defaultValue",
         )
+
+
+def _check_constraint(
+    element_id: str,
+    props: Dict[str, Any],
+    report: _Report,
+    pointer: str,
+    element_by_id: Dict[str, Dict[str, Any]],
+) -> None:
+    """Constraint（参数约束）：expression 单行非空；parameters 引用 Attribute。"""
+    expression = props.get("expression")
+    expression_pointer = pointer + "/expression"
+    if "expression" not in props:
+        report.error(
+            "E-CONSTRAINT-NO-EXPRESSION",
+            "Constraint 缺少必填子字段 `expression`——没有公式的约束元素没有意义。",
+            element_id,
+            expression_pointer,
+        )
+        # 与 JSON Schema 层去重：jsonschema 对 required 缺失报在父对象路径上
+        report.pointers.add(pointer)
+    elif not isinstance(expression, str) or not expression.strip():
+        report.error(
+            "E-CONSTRAINT-NO-EXPRESSION",
+            "Constraint.expression 必须是非空字符串（单行公式文本），实际为 %s。"
+            % _repr(expression),
+            element_id,
+            expression_pointer,
+        )
+    elif "\n" in expression or "\r" in expression:
+        report.error(
+            "E-CONSTRAINT-EXPR-MULTILINE",
+            "Constraint.expression 必须是**单行**公式文本（禁止换行）；"
+            "换行会把公式拆成两行注释，渲染与回验都无法还原。",
+            element_id,
+            expression_pointer,
+        )
+
+    parameters = props.get("parameters")
+    parameters_pointer = pointer + "/parameters"
+    if "parameters" not in props:
+        report.error(
+            "E-CONSTRAINT-PARAMS-INVALID",
+            "Constraint 缺少必填子字段 `parameters`（至少 1 个参数的 id 数组）。",
+            element_id,
+            parameters_pointer,
+        )
+        report.pointers.add(pointer)
+    elif not isinstance(parameters, list) or not parameters:
+        report.error(
+            "E-CONSTRAINT-PARAMS-INVALID",
+            "Constraint.parameters 必须是非空数组，实际为 %s。" % _type_name(parameters),
+            element_id,
+            parameters_pointer,
+        )
+    else:
+        for i, parameter in enumerate(parameters):
+            item_pointer = "%s/%d" % (parameters_pointer, i)
+            if not is_id(parameter):
+                report.error(
+                    "E-CONSTRAINT-PARAMS-INVALID",
+                    "Constraint.parameters[%d] 必须是元素 id 字符串，实际为 %s。"
+                    % (i, _repr(parameter)),
+                    element_id,
+                    item_pointer,
+                )
+            elif parameter not in element_by_id:
+                report.error(
+                    "E-CONSTRAINT-PARAM-DANGLING",
+                    "Constraint.parameters[%d] = `%s` 在模型内不存在（悬空引用）。"
+                    % (i, parameter),
+                    element_id,
+                    item_pointer,
+                )
+            elif element_by_id[parameter].get("kind") != "Attribute":
+                report.error(
+                    "E-CONSTRAINT-PARAM-WRONGKIND",
+                    "Constraint.parameters[%d] = `%s` 指向的元素 kind 是 `%s`，"
+                    "必须指向 Attribute（参数只能是数值属性）。"
+                    % (i, parameter, element_by_id[parameter].get("kind")),
+                    element_id,
+                    item_pointer,
+                )
+
+    if "description" in props and not isinstance(props["description"], str):
+        report.error(
+            "E-PROP-TYPE",
+            "Constraint.description 必须是字符串。",
+            element_id,
+            pointer + "/description",
+        )
+
+
+def _check_connection(
+    element_id: str,
+    props: Dict[str, Any],
+    report: _Report,
+    pointer: str,
+    element_by_id: Dict[str, Dict[str, Any]],
+) -> None:
+    """Connection（连接）：两端必须是同 owner 的 PartUsage，且三元组不重复。"""
+    flow_kind = props.get("flowKind")
+    if "flowKind" in props and flow_kind not in FLOW_KINDS:
+        report.error(
+            "E-ENUM-INVALID",
+            "Connection.flowKind 是受控枚举，允许：%s；实际为 %s。"
+            % ("、".join(FLOW_KINDS), _repr(flow_kind)),
+            element_id,
+            pointer + "/flowKind",
+        )
+
+    connection_owner = element_by_id.get(element_id, {}).get("owner")
+    for field in ("sourceRef", "targetRef"):
+        if field not in props:
+            # 必填缺失已由 REQUIRED_PROPS 报 E-PROP-REQUIRED
+            continue
+        value = props.get(field)
+        item_pointer = pointer + "/" + field
+        if not is_id(value):
+            report.error(
+                "E-PROP-TYPE",
+                "Connection.%s 必须是元素 id 字符串，实际为 %s。" % (field, _repr(value)),
+                element_id,
+                item_pointer,
+            )
+            continue
+        if value not in element_by_id:
+            report.error(
+                "E-CONNECTION-ENDPOINT-DANGLING",
+                "Connection.%s = `%s` 在模型内不存在（悬空引用）。" % (field, value),
+                element_id,
+                item_pointer,
+            )
+            continue
+        if element_by_id[value].get("kind") != "PartUsage":
+            report.error(
+                "E-CONNECTION-ENDPOINT-WRONGKIND",
+                "Connection.%s = `%s` 指向的元素 kind 是 `%s`，必须指向 PartUsage。"
+                % (field, value, element_by_id[value].get("kind")),
+                element_id,
+                item_pointer,
+            )
+            continue
+        if isinstance(connection_owner, str) and element_by_id[value].get("owner") != connection_owner:
+            report.error(
+                "E-CONNECTION-OWNER-MISMATCH",
+                "Connection.%s = `%s` 的 owner 是 `%s`，与 Connection 自身的 owner `%s` "
+                "不一致；连接的两端必须与连接同属一个 owner。"
+                % (field, value, element_by_id[value].get("owner"), connection_owner),
+                element_id,
+                item_pointer,
+            )
+
+    source = props.get("sourceRef")
+    target = props.get("targetRef")
+    if is_id(source) and is_id(target) and source == target:
+        report.error(
+            "E-CONNECTION-SELF",
+            "Connection 的 sourceRef 与 targetRef 不能是同一个元素（`%s`）。" % source,
+            element_id,
+            pointer + "/targetRef",
+        )
+
+    if "description" in props and not isinstance(props["description"], str):
+        report.error(
+            "E-PROP-TYPE",
+            "Connection.description 必须是字符串。",
+            element_id,
+            pointer + "/description",
+        )
+
+
+def _check_connection_duplicates(elements: List[Any], report: _Report) -> None:
+    """同一模型内 (sourceRef, targetRef, flowKind) 三元组不允许重复。"""
+    seen: Dict[Tuple[str, str, str], str] = {}
+    for index, element in enumerate(elements):
+        if not isinstance(element, dict) or element.get("kind") != "Connection":
+            continue
+        element_id = element.get("id")
+        if not is_id(element_id):
+            continue
+        props = element.get("properties")
+        if not isinstance(props, dict):
+            continue
+        source = props.get("sourceRef")
+        target = props.get("targetRef")
+        flow_kind = props.get("flowKind")
+        if not (isinstance(source, str) and isinstance(target, str) and isinstance(flow_kind, str)):
+            continue
+        triple = (source, target, flow_kind)
+        if triple in seen:
+            report.error(
+                "E-CONNECTION-DUP",
+                "Connection 的 (sourceRef, targetRef, flowKind) = (`%s`, `%s`, `%s`) "
+                "与元素 `%s` 完全重复；同一连接只应声明一次。"
+                % (source, target, flow_kind, seen[triple]),
+                element_id,
+                "/elements/%d/properties" % index,
+            )
+        else:
+            seen[triple] = element_id
 
 
 def _check_relations(

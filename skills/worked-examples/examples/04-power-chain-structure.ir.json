@@ -1,0 +1,228 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "PowerChainDemo",
+  "meta": {
+    "title": "范例 4：功率链结构分解与 Connection（v1 增补 kind）",
+    "note": "Connection 为 v1 增补 kind。数量 8/4/4 与效率类数值均为占位值，不得当作实测结论。"
+  },
+  "elements": [
+    {
+      "id": "PART-DEF-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "description": "功率链整体：电池→电调→电机→桨。"
+      }
+    },
+    {
+      "id": "PART-USE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "typeRef": "PART-DEF-POWER-CHAIN",
+        "quantity": 1,
+        "description": "本机唯一的一条功率链。"
+      }
+    },
+    {
+      "id": "PART-DEF-BATTERY",
+      "kind": "PartDefinition",
+      "name": "BatteryPack",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "description": "动力锂电池包。"
+      }
+    },
+    {
+      "id": "PART-DEF-ESC",
+      "kind": "PartDefinition",
+      "name": "ElectronicSpeedController",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "description": "电子调速器，每路电机一个。"
+      }
+    },
+    {
+      "id": "PART-DEF-MOTOR",
+      "kind": "PartDefinition",
+      "name": "BrushlessMotor",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "description": "无刷电机，上下桨各四台。"
+      }
+    },
+    {
+      "id": "PART-DEF-PROP",
+      "kind": "PartDefinition",
+      "name": "Propeller",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "description": "螺旋桨，共轴上下各四副。"
+      }
+    },
+    {
+      "id": "PART-USE-BATTERY",
+      "kind": "PartUsage",
+      "name": "batteryPack",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-DEF-BATTERY",
+        "quantity": 1
+      }
+    },
+    {
+      "id": "PART-USE-ESC",
+      "kind": "PartUsage",
+      "name": "escUnit",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-DEF-ESC",
+        "quantity": 8
+      }
+    },
+    {
+      "id": "PART-USE-MOTOR-UPPER",
+      "kind": "PartUsage",
+      "name": "upperMotor",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-DEF-MOTOR",
+        "quantity": 4
+      }
+    },
+    {
+      "id": "PART-USE-MOTOR-LOWER",
+      "kind": "PartUsage",
+      "name": "lowerMotor",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-DEF-MOTOR",
+        "quantity": 4
+      }
+    },
+    {
+      "id": "PART-USE-PROP-UPPER",
+      "kind": "PartUsage",
+      "name": "upperPropeller",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-DEF-PROP",
+        "quantity": 4
+      }
+    },
+    {
+      "id": "PART-USE-PROP-LOWER",
+      "kind": "PartUsage",
+      "name": "lowerPropeller",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-DEF-PROP",
+        "quantity": 4
+      }
+    },
+    {
+      "id": "CON-BATTERY-TO-ESC",
+      "kind": "Connection",
+      "name": "batteryToEsc",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USE-BATTERY",
+        "targetRef": "PART-USE-ESC",
+        "flowKind": "electrical",
+        "description": "电池母线向八路电调供电。"
+      }
+    },
+    {
+      "id": "CON-ESC-TO-UPPER-MOTOR",
+      "kind": "Connection",
+      "name": "escToUpperMotor",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USE-ESC",
+        "targetRef": "PART-USE-MOTOR-UPPER",
+        "flowKind": "electrical",
+        "description": "八路电调中的四路驱动上桨电机。"
+      }
+    },
+    {
+      "id": "CON-ESC-TO-LOWER-MOTOR",
+      "kind": "Connection",
+      "name": "escToLowerMotor",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USE-ESC",
+        "targetRef": "PART-USE-MOTOR-LOWER",
+        "flowKind": "electrical",
+        "description": "八路电调中的四路驱动下桨电机。"
+      }
+    },
+    {
+      "id": "CON-UPPER-MOTOR-TO-PROP",
+      "kind": "Connection",
+      "name": "upperMotorToPropeller",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USE-MOTOR-UPPER",
+        "targetRef": "PART-USE-PROP-UPPER",
+        "flowKind": "mechanical",
+        "description": "上桨电机驱动上桨。"
+      }
+    },
+    {
+      "id": "CON-LOWER-MOTOR-TO-PROP",
+      "kind": "Connection",
+      "name": "lowerMotorToPropeller",
+      "owner": "PART-USE-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USE-MOTOR-LOWER",
+        "targetRef": "PART-USE-PROP-LOWER",
+        "flowKind": "mechanical",
+        "description": "下桨电机驱动下桨。"
+      }
+    },
+    {
+      "id": "REQ-CRUISE-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "text": "巡航时间不低于 4 小时。",
+        "acceptanceCriteria": "在稳态巡航工作点下，满电续航 T >= 4.0 h。",
+        "verifyMethod": "simulation",
+        "priority": "high",
+        "minEnduranceHours": 4.0
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "PART-USE-POWER-CHAIN",
+          "rationale": "续航由整条功率链的效率与能量共同保障。"
+        }
+      ]
+    },
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "PowerChainDemo",
+      "properties": {
+        "description": "续航仿真工况。",
+        "inputs": [
+          { "name": "cruiseSpeed", "typeRef": "Real", "unit": "m/s" }
+        ],
+        "outputs": [
+          { "name": "enduranceHours", "typeRef": "Real", "unit": "h" }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "用仿真验证续航阈值。"
+        }
+      ]
+    }
+  ]
+}

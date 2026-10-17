@@ -1,0 +1,735 @@
+# 官方 SysML v2 解析器（Pilot Implementation）实测原始输出
+# 日期：2026-10-17
+# 机器：macOS arm64（Apple Silicon）
+# 仓库：<repo>（git HEAD e59cd9e）
+# 环境：.venv/bin/python 3.11 + 本目录自带的 Temurin JRE 21（见 §3）
+# 路径已脱敏：<repo> = 本仓库根，~ = 用户主目录；原始输出其余内容一字未动
+#
+# 结论：已跑通（附证据）。
+#   「已跑通」= 官方解析器在本机真的启动、真的解析了文本、真的给出了逐条带行号的判定。
+#   它 **不等于**「本项目生成的文本通过了官方解析器」：恰恰相反，标杆文本在官方实现下
+#   有 0 条语法错误 + 77 条语义错误（§6、§7）。因此本仓库任何文档都不得写成
+#   「已通过官方解析器验证」。
+#
+# 这份文件回答四个问题：
+#   1) 本机到底有没有 JVM/官方解析器？         -> §1、§3
+#   2) 官方发行形态是什么、许可证是什么？      -> §2
+#   3) 我到底跑了什么命令、输出是什么？        -> §4–§6（§6 是完整 181 行输出）
+#   4) 结论站不站得住、还差什么？              -> §7–§11
+
+================================================================================
+§0 一页结论
+================================================================================
+
+- 官方解析器可用：`org.omg.sysml.interactive.SysMLInteractive`（EPL-2.0）在本机 JRE 21 上
+  启动正常，加载官方标准库 94 个文件，能对输入文本给出带行号的 error/warning。
+- 阳性对照通过：带 `private import ScalarValues::*;` 的最小模型 -> 0 error（§9）。
+- 官方自带示例通过：`VehicleDefinitions.sysml`（官方 SysML-v2-Release 2026-08）-> 0 error，
+  说明「启动 + 标准库 + 喂文本」这条链路本身是有效的，不是驱动方式坏了。
+- 本项目标杆文本 **未通过** 官方语义校验：0 语法错误 / 77 语义错误 / 9 warning（§6）。
+  两类根因（§8 有对照实验）：
+    a. 生成器不输出 `import`：`Real`（24 次）、`String`（12 次）解析不到，
+       连带 `An attribute must be typed by attribute definitions.`（29 次）、
+       `A usage must be typed by definitions.`（7 次）。
+    b. 单位写法 `[...]` 里的 `Wh` 在官方标准库中不存在（`W`/`h`/`m`/`s` 都在 SI 里）。
+       补 `private import ScalarValues::*;` + `private import SI::*;` 后只剩 1 条错误：`Wh`。
+- 本机原先没有 JVM（§1）；现在的 JVM 是本 spike 下载到本目录的 Temurin JRE 21，
+  不入 git（`.gitignore`），复现方式见 §3、§10。
+
+================================================================================
+§1 本机初始环境：没有 JVM（这是二期清单第 1 条此前卡住的直接原因）
+================================================================================
+
+$ which java
+/usr/bin/java
+
+$ java -version
+The operation couldn’t be completed. Unable to locate a Java Runtime.
+Please visit http://www.java.com for information on installing Java.
+(exit 1)
+
+$ /usr/libexec/java_home -V
+The operation couldn’t be completed. Unable to locate a Java Runtime.
+(private/framework JavaVirtualMachines 与 /Library/Java/JavaVirtualMachines 均为空)
+
+$ ls /opt/homebrew/Cellar | grep -iE "jdk|java|openjdk|temurin"
+(无输出：Homebrew 目录存在，但没有装过任何 JDK)
+
+说明：macOS 的 /usr/bin/java 只是 stub，`which java` 有结果不代表有 JVM。
+适配层 `_find_java()` 因此会**实际执行** `java -version` 并检查退出码，把这个假 java 排除掉。
+
+================================================================================
+§2 在线调研：官方发行形态与许可证
+================================================================================
+
+仓库：https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation
+最新 release：tag `2026-08`，published 2026-09-11T20:08:19Z
+  https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation/releases/tag/2026-08
+许可证：Eclipse Public License - v 2.0（EPL-2.0）
+  LICENSE 首行：`Eclipse Public License - v 2.0`
+  该 release 说明也明确：语言与 API 实现已从 LGPL 改为 EPL 分发。
+  库模型（sysml.library / *.kpar）随该 release 一并分发。
+
+release 资产（2026-08）关键项：
+  jupyter-sysml-kernel-0.62.0.zip   126,136,336 B   <- 本 spike 采用
+  jupyterlab-sysml-0.62.0.tgz             5,082 B
+  Kernel_*.kpar / SysML_*.kpar         2 KB ~ 153 KB（标准库的 KPAR 打包）
+  （SysML-v2-Release 仓库另有 install/eclipse/org.omg.sysml.site.zip，43,995,101 B）
+
+**没有 standalone 的 parser jar / 命令行二进制。** 官方只发布两种可运行形态：
+  1) Eclipse 插件（OSGi bundle 集合，headless 驱动成本高）；
+  2) Jupyter kernel 发行包（一个 fat jar + 标准库 + kernel.json）。
+
+kernel 的启动方式（官方 kernel.json 原文）：
+  {
+    "argv": ["java", "-cp", "@KERNEL_INSTALL_DIRECTORY@/*",
+             "org.omg.sysml.jupyter.kernel.ISysML", "{connection_file}"],
+    ...
+  }
+即：官方自己也是用 `java -cp <目录>/*` 起 JVM。
+
+本适配层选用的入口（同一个 fat jar 里就有）：
+  org.omg.sysml.interactive.SysMLInteractive
+  main(String[] args)：args[0] = 标准库目录（`loadLibrary`），随后进入 REPL 读 stdin。
+  源码：org.omg.sysml.interactive/src/org/omg/sysml/interactive/SysMLInteractive.java
+  （main 在第 856 行附近；`loadLibrary` 读 `<path>/Kernel Libraries`、`Systems Library`、
+   `Domain Libraries` 三个子目录）
+
+REPL 的多行输入约定（源码 run() 里可见）：
+  - 单独一行 `%` 进入多行输入模式，读到下一个单独一行 `%` 为止，整段作为一次 parse；
+  - `%exit` 退出。
+适配层据此把待解析文本包成 `% ... % %exit` 喂进去（见 §5）。
+
+================================================================================
+§3 下载与解包（大二进制不入 git）
+================================================================================
+
+限速实测：本机到 release-assets.githubusercontent.com 的单连接约 40 KB/s，
+126 MB 需要约 50 分钟。8 路 Range 并行可到约 1 MB/s，因此写了
+`fetch_asset.py`（仅标准库，逐段校验长度、失败重试）。这不是必须的“技巧”，
+只是把 spike 控制在可等待的时间内；换网络环境可直接用 curl。
+
+$ python3 docs/probe-official-parser/fetch_asset.py \
+    "https://github.com/Systems-Modeling/SysML-v2-Pilot-Implementation/releases/download/2026-08/jupyter-sysml-kernel-0.62.0.zip" \
+    docs/probe-official-parser/jupyter-sysml-kernel-0.62.0.zip --chunk-mb 2 --threads 8
+总大小 126136336 字节，分 61 段，8 线程
+完成 .../jupyter-sysml-kernel-0.62.0.zip（126136336 字节，... ，... KB/s）
+sha256 = 5a015ed3f2b3d2dae14e9c3fb9602d9e1fef5f9ce33cf396c422329405cc3cb2
+
+$ curl -L -o docs/probe-official-parser/jre21-mac-aarch64.tar.gz \
+    "https://api.adoptium.net/v3/binary/latest/21/ga/mac/aarch64/jre/hotspot/normal/eclipse"
+下载到 48,144,965 字节
+sha256 = dec50fc6f9fcd4fe3ae8cabf5a5fa68f6afc48841f7698e468e9aa5d54beed84
+
+$ mkdir -p docs/probe-official-parser/jre
+$ tar -xzf docs/probe-official-parser/jre21-mac-aarch64.tar.gz -C docs/probe-official-parser/jre --strip-components=1
+  （macOS 分发结构：jre/Contents/Home/bin/java）
+
+$ unzip -q docs/probe-official-parser/jupyter-sysml-kernel-0.62.0.zip "sysml/*" -d /tmp/kernel_unzip
+$ mv /tmp/kernel_unzip/sysml docs/probe-official-parser/kernel
+$ ls docs/probe-official-parser/kernel
+jupyter-sysml-kernel-0.62.0-all.jar   (132,967,202 B)
+kernel.json
+sysml.library/                        (官方标准库，7.9 MB，94 个 .kerml/.sysml)
+
+$ docs/probe-official-parser/jre/Contents/Home/bin/java -version
+openjdk version "21.0.12.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS, mixed mode, sharing)
+
+为什么是 JRE 不是 JDK：只需要**运行**官方实现，不需要编译任何 Java 代码。
+（也因此没有 javac/jshell，无法走“写一个 Java 驱动类”的路线。）
+
+入库策略：`jre/`、`kernel/`、`*.zip`、`*.tar.gz`、`*.jar` 全部写进本目录 `.gitignore`；
+本文件记录 URL 与 sha256，换机器按本节重下即可。
+（记录完 sha256 后，我把两个压缩包删了以省 166 MB；解包后的 `jre/` 与 `kernel/` 保留，
+适配层靠它们工作。要核对 sha256 就按本节命令重新下载。）
+
+================================================================================
+§4 原始启动命令（不经适配层，直接喂官方 REPL）
+================================================================================
+
+在仓库根执行：
+
+# 4.1 生成 REPL 输入：单独一行 % 包住文本，再以 % / %exit 收尾
+$ .venv/bin/python -c 'import sys; t=open(sys.argv[1],encoding="utf-8").read(); sys.stdout.write("%\n"+t+"\n%\n%exit\n")' \
+    examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml > /tmp/golden.in
+
+# 4.2 启动官方交互式入口（注意：标准库参数必须是**绝对路径**）
+$ docs/probe-official-parser/jre/Contents/Home/bin/java -Xmx1024m -Djava.awt.headless=true \
+    -cp "docs/probe-official-parser/kernel/*" \
+    org.omg.sysml.interactive.SysMLInteractive \
+    "$PWD/docs/probe-official-parser/kernel/sysml.library" < /tmp/golden.in
+
+踩过的坑（都有据可查，写下来省后来人时间）：
+- 标准库路径**不能给相对路径**。给 `kernel/sysml.library` 时 EMF 的 `URI.createFileURI`
+  会把子目录名里的空格编码成 `%20` 并当成真实文件名去找，直接
+  `FileNotFoundException: .../Kernel%20Libraries/...`；给绝对路径则正常（§6 即绝对路径）。
+- 文本结尾**必须换行**，否则结束标记 `%` 会和最后一行粘在一起，REPL 停在多行输入模式等
+  EOF/下一行，表现为“卡死”。适配层用 `text.rstrip("\n") + "\n"` 固定处理。
+- 本版语法**不接受裸 `import`**（实测，见 §9.3）。
+
+================================================================================
+§5 适配层等价命令（mcp-server/tools/official_parser.py）
+================================================================================
+
+$ PYTHONPATH="$PWD/mcp-server" .venv/bin/python -m tools.official_parser \
+    examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+
+它内部做的事与 §4 完全一致：探测 java + classpath + 标准库 -> 组同样的命令行 ->
+同样的 `%` 包裹 -> 子进程 60 s 超时 -> 把官方输出归一化成
+`{ok, backend, status, diagnostics, detail}`。
+本次运行的摘要（完整 JSON 由重跑该命令得到）：
+
+  ok      = false
+  backend = "pilot-implementation"
+  status  = "available"      # 官方解析器给出了判定
+  diagnostics = 77 条 error（每条带 line；行号来自官方输出里的
+                `(1.sysml line : N column : M)`）
+  detail 末尾：官方实现报出 77 条错误；另有 9 条 warning（未计入 diagnostics）。
+
+================================================================================
+§6 标杆文本的完整运行输出（181 行，原样粘贴）
+================================================================================
+
+被解析的文件：
+  examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+  sha256 = 86fed1f307289503c59705850b7ec04b02171dbc3e56daf571f3b95cb73d83d2
+  mtime  = 2026-10-17 16:37:20
+  （注：本仓库当时有其它任务在并发改动 generator.py 与这个标杆文件；上面 sha256 固定的是
+   我实际解析的那一版。换一版文本，下面的行号/条数会变，必须重新跑。）
+
+命令：见 §4.2。stdout 与 stderr 全部如下（stderr 只有 3 行 log4j 噪音）：
+
+---------------------------- 完整输出开始 ----------------------------
+SysML v2 Pilot Implementation
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Performances.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Transfers.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Base.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Observation.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Triggers.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Clocks.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/SpatialFrames.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/ControlPerformances.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/KerML.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Objects.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/FeatureReferencingPerformances.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Metaobjects.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/StatePerformances.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/TransitionPerformances.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Occurrences.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Semantic Library/Links.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/RationalFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/ControlFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/BooleanFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/VectorFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/RealFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/CollectionFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/ComplexFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/NumericalFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/TrigFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/IntegerFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/NaturalFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/StringFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/DataFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/ScalarFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/BaseFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/SequenceFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Function Library/OccurrenceFunctions.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Data Type Library/ScalarValues.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Data Type Library/VectorValues.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Kernel Libraries/Kernel Data Type Library/Collections.kerml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Parts.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/SysML.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/VerificationCases.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/AnalysisCases.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/States.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Flows.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Views.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Requirements.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Interfaces.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Actions.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/UseCases.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Items.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Metadata.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Allocations.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Calculations.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Constraints.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Attributes.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Ports.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/StandardViewDefinitions.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Connections.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Systems Library/Cases.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/SI.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQBase.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/Quantities.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQLight.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQElectromagnetism.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQCondensedMatter.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/MeasurementRefCalculations.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/USCustomaryUnits.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQMechanics.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/VectorCalculations.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/SIPrefixes.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQSpaceTime.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQAcoustics.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQ.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/MeasurementReferences.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/TensorCalculations.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQCharacteristicNumbers.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQInformation.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/Time.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQChemistryMolecular.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/QuantityCalculations.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQAtomicNuclear.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Quantities and Units/ISQThermodynamics.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Analysis/AnalysisTooling.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Analysis/TradeStudies.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Analysis/SampledFunctions.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Analysis/StateSpaceRepresentation.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Cause and Effect/CauseAndEffect.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Cause and Effect/CausationConnections.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Geometry/SpatialItems.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Geometry/ShapeItems.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Metadata/RiskMetadata.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Metadata/ParametersOfInterestMetadata.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Metadata/ModelingMetadata.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Metadata/ImageMetadata.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Requirement Derivation/RequirementDerivation.sysml...
+Reading <repo>/docs/probe-official-parser/kernel/sysml.library/Domain Libraries/Requirement Derivation/DerivationConnections.sysml...
+1> ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 9 column : 39)
+ERROR:Couldn't resolve reference to Element 'Wh'. (1.sysml line : 9 column : 54)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 11 column : 42)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 16 column : 35)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 21 column : 37)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 49 column : 34)
+ERROR:Couldn't resolve reference to Element 'W'. (1.sysml line : 49 column : 48)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 51 column : 36)
+ERROR:Couldn't resolve reference to Element 'h'. (1.sysml line : 51 column : 48)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 53 column : 41)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 73 column : 33)
+ERROR:Couldn't resolve reference to Element 'm'. (1.sysml line : 73 column : 46)
+ERROR:Couldn't resolve reference to Element 's'. (1.sysml line : 73 column : 48)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 75 column : 35)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 91 column : 34)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 92 column : 30)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 93 column : 31)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 94 column : 39)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 102 column : 34)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 103 column : 30)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 104 column : 31)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 105 column : 47)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 106 column : 45)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 114 column : 34)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 115 column : 30)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 116 column : 31)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 117 column : 43)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 118 column : 37)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 126 column : 34)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 127 column : 30)
+ERROR:Couldn't resolve reference to Type 'String'. (1.sysml line : 128 column : 31)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 129 column : 38)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 130 column : 35)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 131 column : 35)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 140 column : 29)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 141 column : 31)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 142 column : 29)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 143 column : 27)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 150 column : 26)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 151 column : 28)
+ERROR:Couldn't resolve reference to Type 'Real'. (1.sysml line : 152 column : 30)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 9 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 11 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 16 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 21 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 49 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 51 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 53 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 73 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 75 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 91 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 92 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 93 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 94 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 102 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 103 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 104 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 105 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 106 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 114 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 115 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 116 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 117 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 118 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 126 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 127 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 128 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 129 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 130 column : 9)
+ERROR:An attribute must be typed by attribute definitions. (1.sysml line : 131 column : 9)
+ERROR:A usage must be typed by definitions. (1.sysml line : 140 column : 9)
+ERROR:A usage must be typed by definitions. (1.sysml line : 141 column : 9)
+ERROR:A usage must be typed by definitions. (1.sysml line : 142 column : 9)
+ERROR:A usage must be typed by definitions. (1.sysml line : 143 column : 9)
+ERROR:A usage must be typed by definitions. (1.sysml line : 150 column : 9)
+ERROR:A usage must be typed by definitions. (1.sysml line : 151 column : 9)
+ERROR:A usage must be typed by definitions. (1.sysml line : 152 column : 9)
+WARNING:Should be a measurement reference (unit). (1.sysml line : 9 column : 54)
+WARNING:Bound features should have conforming types (1.sysml line : 9 column : 54)
+WARNING:Should be a measurement reference (unit). (1.sysml line : 49 column : 48)
+WARNING:Bound features should have conforming types (1.sysml line : 49 column : 48)
+WARNING:Should be a measurement reference (unit). (1.sysml line : 51 column : 48)
+WARNING:Bound features should have conforming types (1.sysml line : 51 column : 48)
+WARNING:Should be a measurement reference (unit). (1.sysml line : 73 column : 46)
+WARNING:Bound features should have conforming types (1.sysml line : 73 column : 46)
+WARNING:Bound features should have conforming types (1.sysml line : 73 column : 48)
+2> 
+----------------------------- 完整输出结束 -----------------------------
+
+行数核对：1（`SysML v2 Pilot Implementation` 头）
+        + 94（启动时逐行 `Reading ...`，加载官方标准库）
+        + 77（ERROR）
+        + 9（WARNING）
+        = 181 行。
+
+================================================================================
+§7 结果判读（模型事实 / 规范语义 / 推断 —— 分开写）
+================================================================================
+
+【模型事实】（这些是命令输出里直接可数的）
+- 0 条语法错误：输出里没有 `no viable alternative` / `mismatched input` / `extraneous input`
+  / `missing EOF` 这类 Xtext 语法诊断。
+- 77 条 ERROR，按原文分类计数（相加正好 77）：
+    29  An attribute must be typed by attribute definitions.
+    24  Couldn't resolve reference to Type 'Real'.
+    12  Couldn't resolve reference to Type 'String'.
+     7  A usage must be typed by definitions.
+     5  Couldn't resolve reference to Element '...'：
+          'W'（1）、'h'（1）、'm'（1）、's'（1）、'Wh'（1）
+  小提示：第一条 ERROR 与 REPL 提示符粘在同一行（`1> ERROR:...`），所以若用 `grep ^ERROR`
+  逐行统计会少 1 条（Real 显示 23）；正确总数是 77。适配层会先剥掉 `N> ` 前缀再统计。
+- 9 条 WARNING，全部围绕 `[W] [h] [m/s]` 这类单位写法：
+    `WARNING:Should be a measurement reference (unit).`
+    `WARNING:Bound features should have conforming types`
+- 退出码 0（REPL 正常退出，`%exit` 生效）。
+
+【规范语义】（官方实现怎么判，不掺我的解释）
+- 官方实现把 `Real` / `String` 当作**需要解析的引用**：没有 `import ScalarValues::*;`
+  就报 `Couldn't resolve reference to Type`，并连带把使用它们的属性判成
+  “must be typed by attribute definitions”。
+- `attribute x : Real = 1200.0 [Wh];` 这种 `[...]` 写法被官方**语法**接受（无语法错误），
+  但 `Wh` 被当作要解析的名字；`W`/`h`/`m`/`s` 能在 SI 库里找到，`Wh` 找不到。
+- 因此：**语法合规 ≠ 语义合规**。本项目内置 lint 只能保证前者的一部分。
+
+【推断】（我的判断，标明是推断）
+- 77 条错误里绝大多数是“缺 import”这一条根因的连锁反应，不是 77 个独立缺陷；
+  §8 的对照实验支持这个判断（补 import 后 77 -> 5 -> 1）。
+- `Wh` 缺失说明标杆模型用了一个官方标准库没有的单位名。要么改用库里有的写法
+  （例如 `W` 与 `h` 的组合，或在模型里自定义单位），要么在模型内声明 `Wh`。
+  这一条需要建模负责人拍板，不属于适配层能修的范围。
+
+================================================================================
+§8 根因对照实验（只在 /tmp 的副本上改，未改仓库文件）
+================================================================================
+
+8.1 标杆文本原样（无任何 import）
+    -> 77 error / 9 warning（§6）
+
+8.2 在 `package CoaxialOctoRotor {` 后插入一行 `private import ScalarValues::*;`
+    命令同 §4，结果：
+      ERROR=5 WARNING=9
+      1> ERROR:Couldn't resolve reference to Element 'Wh'. (1.sysml line : 10 column : 54)
+      ERROR:Couldn't resolve reference to Element 'W'.  (1.sysml line : 50 column : 48)
+      ERROR:Couldn't resolve reference to Element 'h'.  (1.sysml line : 52 column : 48)
+      ERROR:Couldn't resolve reference to Element 'm'.  (1.sysml line : 74 column : 46)
+      ERROR:Couldn't resolve reference to Element 's'.  (1.sysml line : 74 column : 48)
+    => `Real` / `String` 的 24+12 条与连带的 29+7 条全部消失。**缺 import 是主因。**
+
+8.3 再插入一行 `private import SI::*;`
+    -> ERROR=1 WARNING=2
+      1> ERROR:Couldn't resolve reference to Element 'Wh'. (1.sysml line : 11 column : 54)
+    => `W`/`h`/`m`/`s` 都能在 SI 库里解析；`Wh` 不能。
+
+8.4 在官方标准库里找 `Wh`：
+    $ grep -rn "Wh\b" docs/probe-official-parser/kernel/sysml.library --include=*.sysml --include=*.kerml
+    (无输出)
+    => 官方标准库（Kernel/Systems/Domain 三套）里没有 `Wh` 这个单位名。
+
+================================================================================
+§9 阳性对照：证明“跑通”不是我自说自话
+================================================================================
+
+9.1 最小合法模型（带 import）-> 0 error
+    $ printf '%%\npackage Demo {\n    private import ScalarValues::*;\n    attribute a : Real = 1.0;\n}\n%%\n%%exit\n' \
+      | docs/probe-official-parser/jre/Contents/Home/bin/java -Xmx1024m -Djava.awt.headless=true \
+        -cp "docs/probe-official-parser/kernel/*" \
+        org.omg.sysml.interactive.SysMLInteractive \
+        "$PWD/docs/probe-official-parser/kernel/sysml.library"
+    SysML v2 Pilot Implementation
+    1> Package Demo (c9e1fc00-b816-4b7d-9311-9e93d2e262ff)
+    2>
+    => 适配层在同一输入上返回 ok=true / status="available"（有单测覆盖这条分支）。
+
+9.2 官方自带示例 -> 0 error（说明库加载、驱动方式、文本喂入都正确）
+    文件：SysML-v2-Release 2026-08 的
+      sysml/src/examples/Vehicle Example/VehicleDefinitions.sysml
+      sha256 = 26aaac35d37d7298157ac6cbad7d4dbad5f638389561f4d0216975ff3ca0ffbd
+    命令：同 §4（文本换成该文件，且保证末尾换行）
+    输出：ERROR=0 WARNING=0，退出码 0，末行为
+      1> Package VehicleDefinitions (dabd005e-cddf-49be-9573-89341dad101d)
+      2>
+    => 同一套 JVM/库/REPL 驱动能吃下官方示例并 0 错误，所以 §6 的 77 条不是“驱动坏了”。
+
+9.3 语法小观察：本版不接受裸 `import`
+    $ ... <<<  "% / package Demo { / import ScalarValues::*; / } / % / %exit"
+    1> ERROR:mismatched input 'import' expecting '}' (1.sysml line : 2 column : 5)
+    ERROR:no viable alternative at input '::' (1.sysml line : 2 column : 24)
+    2>
+    换成 `private import ScalarValues::*;` 或 `public import ScalarValues::*;` -> 0 error。
+    => 这是实测现象；官方示例也确实都写 `private import` / `public import`。
+       生成器将来若要补 import，建议直接用 `private import`。
+
+================================================================================
+§10 复现步骤（从零到 §6）
+================================================================================
+
+1. cd 到仓库根；
+2. 按 §3 下 kernel zip 与 JRE，解到 docs/probe-official-parser/{kernel,jre}；
+3. 按 §4.1 生成 /tmp/golden.in；
+4. 按 §4.2 跑 java 命令（**标准库参数用绝对路径**）；
+5. 或者直接用适配层：PYTHONPATH="$PWD/mcp-server" .venv/bin/python -m tools.official_parser <file.sysml>
+6. 想要逐条 JSON：parse_with_official(text) 返回的 diagnostics 就是 §6 里 77 条 ERROR 的
+   结构化版本（line + message）。
+
+CI/无网环境：适配层不下载任何东西。探测不到 java/classpath 时 detect_backend() 返回
+backend="none"、parse_with_official() 返回 status="unavailable"、ok=false，
+绝不当成“通过”。单测 tests/test_official_parser.py 全部 mock 掉后端，不需要 JVM/网络。
+
+================================================================================
+§11 卡点与限制（诚实清单）
+================================================================================
+
+1. 本机原先**没有 JVM**（§1）。现在的 JVM 是 spike 下载到本目录的 Temurin JRE 21，
+   不入 git；换机器/CI 必须重下，否则适配层只能返回 unavailable。
+2. 官方**没有 standalone parser jar/CLI**（§2）。本适配层用的是 Jupyter kernel 发行包里的
+   `SysMLInteractive` 交互式入口 + REPL `%` 多行输入，属于“官方组件的非官方用法”。
+   它能给出与 Jupyter kernel 相同的 parse/validate 结果（kernel 内部同样调用
+   `SysMLInteractive.process`），但不是官方文档承诺的 CLI 契约；官方若改 REPL 交互，
+   本层要跟着改。
+3. `%` 行冲突：文本里出现“单独一行 %”时，本层拒绝解析（status=unverified），
+   不冒截断后误报通过的风险。
+4. 官方实现每次启动都要重新加载 94 个库文件（本机约 4–6 秒），没有常驻进程/缓存。
+   60 s 超时对本仓库规模足够，但批量解析大模型时会慢。
+5. 只验证了 macOS arm64 + Temurin 21；Windows/Linux 未验证（适配层按路径/可执行名
+   做了平台无关处理，但没有实测证据）。
+6. **没有**把 official_parser 接进 verify_sysml / MCP 工具链（不在本任务文件范围）。
+   目前它只是一个可独立调用的薄适配层。
+7. 语义结论受“标准库版本”影响：本证据固定的是 kernel 0.62.0 / release 2026-08 的库。
+8. 本证据只覆盖一个标杆文件；没有做更大语料的统计，不推广成“生成器整体合规率”。
+
+================================================================================
+§12 结论
+================================================================================
+
+结论：已跑通（附证据）。
+
+- 官方解析器在本机真实运行，命令、完整输出、退出码、阳性对照、官方示例对照都在本文件里；
+- 但**标杆文本没有通过官方语义校验**（0 语法 / 77 语义 / 9 warning），根因是缺 import
+  与 `Wh` 不在标准库；补 import 后可降到 1 条；
+- 因此：可以说“官方解析器已接入并可运行”，**不可以说“生成的文本已通过官方解析器验证”**。
+
+================================================================================
+§13 追加实验（2026-10-17，操作者=自动任务 T7）：生成器补 import 头 + Wh 别名后的复测
+================================================================================
+
+背景：§6–§8 的 77 条诊断是**补 import 之前**的历史状态。T7 改了生成器（见 §13.1）后，
+用同一套官方 Pilot Implementation 后端重跑 golden / base / extended 三份生成文本，
+结果均为 **0 条诊断**。下面记录命令、输入指纹与原始返回，供复核。
+
+13.1 本轮生成器改动（只列影响文本形态的）
+  a. package 内固定两行（位置/缩进写死）：
+        private import ScalarValues::*;
+        private import SI::*;
+     —— 裸 import 被本版官方语法拒绝（§9.3），所以用 private。
+  b. 每个元素声明前输出 `// id: <id>`；Connection 的 name 写进结构化注释
+     `// Connection <id> flowKind=... name=<name> [description: ...]`。
+     —— 这些都是**注释**，不改变官方解析结果；改它们是为了让 parse_sysml 能还原 IR。
+  c. 单位别名：IR 的 `Wh` 渲染为 `W*h`（逆解析还原回 `Wh`）。
+     依据：§8.3/§8.4 已证明 `W`/`h` 在 SI 库中、`Wh` 不在；小实验见 §13.4。
+
+13.2 后端探测（命令与输出）
+  $ cd <repo>
+  $ PYTHONPATH="$PWD/mcp-server" .venv/bin/python -c "from tools.official_parser import detect_backend; import json; print(json.dumps(detect_backend(), ensure_ascii=False))"
+  {"backend": "pilot-implementation", "available": true,
+   "detail": "java=<repo>/docs/probe-official-parser/jre/Contents/Home/bin/java；classpath 共 1 个 jar；
+             标准库=<repo>/docs/probe-official-parser/kernel/sysml.library",
+   "evidence_path": "<repo>/docs/probe-official-parser/EVIDENCE.txt"}
+
+13.3 golden：适配层等价命令与结果
+  $ PYTHONPATH="$PWD/mcp-server" .venv/bin/python -m tools.official_parser \
+      examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+
+  输入：examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+        chars  = 8781
+        sha256 = 30b66e27273f69710a7c41cba62b15f8429a84e44db4c911f81406836cc3bf44
+  返回（原样，省略绝对路径前缀）：
+        ok      = true
+        backend = "pilot-implementation"
+        status  = "available"
+        diagnostics = []            # 0 条
+        detail  = "命令：<java> -Xmx1024m -Djava.awt.headless=true
+                   -cp <kernel>/jupyter-sysml-kernel-0.62.0-all.jar
+                   org.omg.sysml.interactive.SysMLInteractive <kernel>/sysml.library；
+                   官方实现未报错（退出码 0）。"
+
+13.4 单位写法小实验（同一后端；证明别名选型）
+  输入均为：
+        package Demo {
+            private import ScalarValues::*;
+            private import SI::*;
+            attribute e : Real = 1200.0 [<unit>];
+        }
+  结果：
+        [Wh]    -> ERROR:Couldn't resolve reference to Element 'Wh'.  (1 条)
+        [W*h]   -> 0 条（ok=true）
+        [W * h] -> 0 条（ok=true；生成器实际渲染无空格形式 `W*h`）
+        [rpm]   -> ERROR:Couldn't resolve reference to Element 'rpm'.  (1 条)
+  结论（范围限定）：`Wh` 不在本版官方标准库；`W*h` 被官方语法与引用解析接受。
+  这与 §8 的历史结论一致，并且说明「0 error」只在补齐 import + 别名后成立。
+
+13.5 base_model / extended_model：无独立文件的等价调用
+  $ PYTHONPATH="$PWD/mcp-server" .venv/bin/python - <<'PY'
+    import hashlib, json, sys
+    sys.path.insert(0, 'tests')
+    from _support import base_model, extended_model
+    from tools.generator import generate_sysml
+    from tools.official_parser import parse_with_official
+    for label, model in (("base", base_model()), ("extended", extended_model())):
+        text = generate_sysml(model)["text"]
+        print(label, len(text), hashlib.sha256(text.encode()).hexdigest())
+        print(json.dumps(parse_with_official(text), ensure_ascii=False, indent=2))
+    PY
+
+  实际结果：
+        base      chars=1508 sha256=b92c2fd01078309d9bd1ee12f48041213aad50047a1b8d1ae365f26902ab2e71
+                  ok=true  status="available"  diagnostics=[]  detail="...官方实现未报错（退出码 0）"
+        extended  chars=2067 sha256=a4a416009e943da3154eee525c8e5935e58cb3651c1ef13298b611d16cd1eecd
+                  ok=true  status="available"  diagnostics=[]  detail="...官方实现未报错（退出码 0）"
+
+13.6 本轮结论（分三层写）
+  【模型事实】三份生成文本在官方 Pilot Implementation 下均返回 0 条 error（diagnostics=[]），
+             退出码 0；输入 sha256 已固定在本节。适配层同时未统计到 warning（detail 里没有
+             "另有 N 条 warning" 的提示）。
+  【规范语义】0 error 表示官方实现**接受了这些语法形态并解析了其中的名字/引用**
+             （Real/String/SI 单位都能解析，Wh 以 W*h 表达后也可解析）。
+             它**不**表示模型语义正确、参数合理或建模质量达标。
+  【推断】本轮把历史 77 条诊断归零的充分改动是「标准库 import 头」+「Wh 别名」；
+             其余文本变化（id/name 注释）都是注释，不影响官方解析结果——这一点由改动
+             前后的同一后端输出对比支持，但没有做逐行差分实验，属推断。
+
+13.7 不能从本节推出的结论（诚实边界）
+  - 不能说「本项目生成的文本已通过官方解析器验证」——本节只支持
+    「语法与引用解析经官方 Pilot Implementation（2026-08 release）实测 0 error」，
+    范围限定到这三份文本与这个后端版本，语义/建模质量未验证。
+  - 不能把 0 error 推广成「任意 IR 都能生成 0 error 的文本」：只实测了上述三份。
+  - 不能把官方解析器结果与内置 lint / parse_sysml 的往返结果互相冒充：
+    前者是官方实现，后两者是本仓库的轻量工具。
+  - 本轮未改动 §1–§12 的任何历史内容（只追加本节）。
+
+13.8 复现前提
+  - 同 §3：本目录 jre/ 与 kernel/ 已按 §3 解包（不入 git）；换机器/CI 必须重下，
+    否则适配层返回 status="unavailable"、ok=false。
+  - 若只改文本而没重新解包库，行号会变，但本节以 diagnostics 条数与 sha256 为准。
+
+================================================================================
+§14 追加实验（2026-10-17，操作者=二期集成任务）：标杆案例补行为元素（34 元素）后的复测
+================================================================================
+
+背景：二期收口给 examples/golden-coaxial-power-chain 增加了 1 个 StateDefinition
+（FlightModeStates，5 状态 5 迁移），元素数 33 → 34、关系数保持 20。生成文本因此变化，
+§13.3 记录的 sha256 不再代表现行 golden。本节按同一后端重测，**只覆盖 golden 一份**；
+§13 的 base / extended 两份文本未改动，那些数字仍有效。
+
+14.1 输入指纹（现行 golden）
+  IR : examples/golden-coaxial-power-chain/golden-coaxial-power-chain.ir.json
+       elements = 34（需求 4 + 结构定义 7 + 结构用法 8 + 参数 9 + 功能 2 + 行为 1
+                    + 约束 1 + 连接 2）
+       relations = 20（未新增）
+       sha256    = adae5c6146a3e0f3f8e5eff0982f1efb258efba3bdac3b76e3445eaa078af0e3
+  文本: examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+       chars  = 9766
+       lines  = 213
+       sha256 = bb64cc2cbfdc5f5667049a76f6b57c4925a6ed29b2344c94d09d70e9ac6f6129
+
+14.2 命令与结果
+  $ cd <repo>
+  $ PYTHONPATH="$PWD/mcp-server" .venv/bin/python -m tools.official_parser \
+      examples/golden-coaxial-power-chain/golden-coaxial-power-chain.sysml
+
+  返回（原样，省略绝对路径前缀）：
+        ok      = true
+        backend = "pilot-implementation"
+        status  = "available"
+        diagnostics = []            # 0 条
+        detail  = "命令：<java> -Xmx1024m -Djava.awt.headless=true
+                   -cp <kernel>/jupyter-sysml-kernel-0.62.0-all.jar
+                   org.omg.sysml.interactive.SysMLInteractive <kernel>/sysml.library；
+                   官方实现未报错（退出码 0）。"
+
+  另：同一文本走内置回验 verify_sysml(official=true)：ok=true、34/34 元素匹配、
+  0 lint error（内置比对结果与 official 键分别标注，互不冒充）。
+
+14.3 本轮唯一影响文本形态的 IR 变化
+  新增元素 STATE-FLIGHT-MODES（kind=StateDefinition，name=FlightModeStates，
+  owner=CoaxialOctoRotor），渲染为：
+        state def FlightModeStates {
+            entry; then Takeoff;
+            state Takeoff;
+            state Cruise;
+            state ReturnToHome;
+            state Fault;
+            state Landed;
+            transition Transition_Takeoff_to_Cruise_0 first Takeoff then Cruise;
+            // trigger: 返航指令或任务段剩余时间不足
+            transition Transition_Cruise_to_ReturnToHome_1 first Cruise then ReturnToHome;
+            // trigger: 转速比越界或功率遥测持续异常
+            transition Transition_Cruise_to_Fault_2 first Cruise if (x8System.speedRatioEta <= 0.75) then Fault;
+            // trigger: 触地检测（起落架受压）
+            transition Transition_ReturnToHome_to_Landed_3 first ReturnToHome then Landed;
+            // trigger: 迫降完成（触地检测）
+            transition Transition_Fault_to_Landed_4 first Fault then Landed;
+        }
+  形态本身（entry; then / transition ... first ... [if (...)] then ...）已在 §13 实测过；
+  本轮真正新增的实测点是 **guard 里的名字怎么才能被官方解析器解析**（见 14.4）。
+
+14.4 guard 名字解析实验（同一后端，区分「通过」与「失败」两种写法）
+  做法：复制 golden 的 StateDefinition，只改 owner 与 Cruise→Fault 的 guard，其余不变，
+  生成后整份送官方后端。
+
+    owner                 guard                             ok     诊断数  诊断摘要
+    CoaxialOctoRotor      x8System.speedRatioEta <= 0.75    true   0       -
+    CoaxialOctoRotor      speedRatioEta <= 0.75             false  1       Couldn't resolve reference to Element 'speedRatioEta'.
+    CoaxialOctoRotor      enduranceHours <= 0.5              false  1       Couldn't resolve reference to Element 'enduranceHours'.
+    CoaxialOctoRotor      faultDetected                     false  1       Couldn't resolve reference to Element 'faultDetected'.
+    PART-STRUCT-SYSTEM    self.speedRatioEta <= 0.75        false  1       Couldn't resolve reference to Element 'speedRatioEta'.
+
+  结论（范围限定）：本子集里 guard 只能引用**从 state def 所在作用域可达**的名字；
+  包级 PartUsage 的特征要用点号路径（`x8System.speedRatioEta`）才解析得到，
+  裸写特征名、或引用未定义标识符，都会新增 1 条诊断。golden 采用第一种（0 诊断）。
+  这是「写得对才 0 error」的具体证据，不是「怎么写都行」。
+
+14.5 本轮结论（分三层写）
+  【模型事实】现行 golden 生成文本（sha256=bb64cc2c…f6129，9766 chars）在官方
+             Pilot Implementation 下返回 diagnostics=[]、退出码 0；IR 为 34 元素 / 20 关系。
+  【规范语义】0 error 表示官方实现接受了新增状态机的语法形态，并解析了 guard 里的
+             `x8System.speedRatioEta` 引用；不表示状态机语义完备、阈值合理或建模质量达标。
+  【推断】§13 的结论对本轮文本仍成立（同一后端、同一生成器，只多 1 个状态机元素），
+             但没有逐行差分实验，属推断。
+
+14.6 不能从本节推出的结论（诚实边界）
+  - 不能说「标杆模型已通过官方解析器验证」：本节只支持「语法与引用解析 0 error」，
+    语义/建模质量未验证，也不能推广到任意 IR。
+  - guard 里的 0.75 是**占位阈值**（与 REQ-ROTOR-SPEED-RATIO.minSpeedRatio 同源），
+    不是实测边界。
+  - 本轮未改动 §1–§13 的任何历史内容（只追加本节）。§13.3 的 sha256 记录的是
+    33 元素版本，已被本节取代，保留作为过程证据。
