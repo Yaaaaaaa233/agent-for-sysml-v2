@@ -1,0 +1,80 @@
+{
+  "schema": "sysml-verify-report/v1",
+  "generatedAt": "2026-10-20T00:16:22+0800",
+  "model": {
+    "path": "examples/golden-coaxial-power-chain/golden-coaxial-power-chain.ir.json",
+    "irSha256": "adae5c6146a3e0f3f8e5eff0982f1efb258efba3bdac3b76e3445eaa078af0e3",
+    "elements": 34,
+    "relations": 20,
+    "package": "CoaxialOctoRotor",
+    "schema": "sysml-ir/v1"
+  },
+  "python": "/Users/yea/Desktop/Study/比赛/2610_MBSE/sysml-modeling-agent/.venv/bin/python",
+  "layers": {
+    "L0_validate": {
+      "seconds": 0.107,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "schemaLayer": "ok(+0)"
+    },
+    "L1_generate": {
+      "seconds": 0.069,
+      "ok": true,
+      "sha256": "bb64cc2cbfdc5f5667049a76f6b57c4925a6ed29b2344c94d09d70e9ac6f6129",
+      "chars": 9766,
+      "lines": 214,
+      "deterministic": true,
+      "stats": {
+        "package": "CoaxialOctoRotor",
+        "elements": 34,
+        "byKind": {
+          "PartDefinition": 7,
+          "PartUsage": 8,
+          "Requirement": 4,
+          "ActionDefinition": 2,
+          "StateDefinition": 1,
+          "Attribute": 9,
+          "Constraint": 1,
+          "Connection": 2
+        },
+        "relations": 20,
+        "lines": 213,
+        "chars": 9766
+      }
+    },
+    "L1_verify_official": {
+      "seconds": 4.146,
+      "ok": true,
+      "counts": {
+        "irElements": 34,
+        "textDeclarations": 58,
+        "matched": 34,
+        "missing": 0,
+        "extra": 0,
+        "mismatched": 0,
+        "lintErrors": 0
+      },
+      "missing": [],
+      "extra": [],
+      "mismatched": [],
+      "official": {
+        "status": "available",
+        "ok": true,
+        "backend": "pilot-implementation",
+        "diagnostics": [],
+        "detail": "命令：/Users/yea/Desktop/Study/比赛/2610_MBSE/sysml-modeling-agent/docs/probe-official-parser/jre/Contents/Home/bin/java -Xmx1024m -Djava.awt.headless=true -cp /Users/yea/Desktop/Study/比赛/2610_MBSE/sysml-modeling-agent/docs/probe-official-parser/kernel/jupyter-sysml-kernel-0.62.0-all.jar org.omg.sysml.interactive.SysMLInteractive /Users/yea/Desktop/Study/比赛/2610_MBSE/sysml-modeling-agent/docs/probe-official-parser/kernel/sysml.library；官方实现未报错（退出码 0）。"
+      }
+    },
+    "L2_traceability": {
+      "seconds": 0.001,
+      "ok": true,
+      "gaps": {
+        "unsatisfied": [],
+        "unverified_requirement": [],
+        "unverified_action": []
+      },
+      "matrixRows": 4
+    }
+  }
+}

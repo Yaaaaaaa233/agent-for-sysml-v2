@@ -1,0 +1,2 @@
+bb64cc2cbfdc5f5667049a76f6b57c4925a6ed29b2344c94d09d70e9ac6f6129  golden-coaxial-power-chain.sysml
+adae5c6146a3e0f3f8e5eff0982f1efb258efba3bdac3b76e3445eaa078af0e3  ../../../../examples/golden-coaxial-power-chain/golden-coaxial-power-chain.ir.json

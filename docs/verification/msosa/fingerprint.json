@@ -1,0 +1,33 @@
+{
+  "tool": "Magic Systems of Systems Architect",
+  "edition": "CATIA Magic/Cameo SysML v2 Community Edition",
+  "version": "2026x Refresh1",
+  "build": "2026.1.0-42-b71a9669（BUILD 2026-05-26；msosa.log 的 Version Info 记为「2026x Refresh1 Enterprise Community Seat」）",
+  "installerFile": "No_Magic_2026x_Refresh1.Magic_Systems_of_Systems_Architect_2026x_Refresh1_mac_aarch64.dmg",
+  "licenseMode": "Use in Community Mode（Community Seat）",
+  "perspective": "System Engineer SysML v2（⚠️ 首次切换后回填确认）",
+  "os": "macOS 26.6.2 (25G83) / Apple M5",
+  "plugins": [
+    {
+      "name": "SysML v2 Plugin",
+      "version": "2026x Refresh1（plugin.xml internalVersion=202600000；目录 com.nomagic.magicdraw.sysml2）",
+      "started": "是（msosa.log：Plugin started: SysML v2）"
+    },
+    {
+      "name": "SysML v1 Plugin",
+      "version": "⚠️ 首装回填（目录 com.nomagic.magicdraw.sysml 存在）"
+    },
+    {
+      "name": "Cameo Requirements Modeler",
+      "version": "⚠️ 首装回填（目录 com.nomagic.requirements 存在）"
+    }
+  ],
+  "optionalPluginsPresent": [
+    "com.nomagic.magicdraw.sysml2.evaluation（CE 下 Not supported：缺商业 CST/MMA）",
+    "com.nomagic.magicdraw.sysml2.simulation",
+    "com.nomagic.magicdraw.md_sysml2_migration"
+  ],
+  "operator": "⚠️ 待填",
+  "date": "2026-10-20",
+  "evidenceRoot": "sysml-modeling-agent/docs/verification/msosa/"
+}

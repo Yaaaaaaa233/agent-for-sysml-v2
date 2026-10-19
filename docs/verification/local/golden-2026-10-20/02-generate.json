@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "stats": {
+    "package": "CoaxialOctoRotor",
+    "elements": 34,
+    "byKind": {
+      "PartDefinition": 7,
+      "PartUsage": 8,
+      "Requirement": 4,
+      "ActionDefinition": 2,
+      "StateDefinition": 1,
+      "Attribute": 9,
+      "Constraint": 1,
+      "Connection": 2
+    },
+    "relations": 20,
+    "lines": 213,
+    "chars": 9766
+  },
+  "sha256": "bb64cc2cbfdc5f5667049a76f6b57c4925a6ed29b2344c94d09d70e9ac6f6129"
+}

@@ -1,0 +1,4 @@
+# Project Validation Suites 对话框抄录（Included/Ignored 原样）
+# 打开路径：Analyze > Validation > Project Validation Suites
+
+<paste here>
