@@ -23,8 +23,9 @@
 | 标杆案例（**需求 + 结构 + 参数 + 行为**） | ✅ 完成：**34 元素 / 20 关系**，行为（`StateDefinition` 飞行模式状态机）已于二期补齐 |
 | 测试 | ✅ **606 个用例全绿**（含 40 余个应被拒绝的反例、25 个 timeline 用例） |
 | 官方 SysML v2 解析器 | ✅ **语法与引用解析经官方 Pilot Implementation（release 2026-08）实测 0 error**（证据：`docs/probe-official-parser/EVIDENCE.txt` §13/§14）；**语义/建模质量未验证**。日常回验仍由内置 lint + 元素级比对承担 |
-| MCP 协议链路（Streamable HTTP + Bearer 鉴权） | ✅ **已实测通过**：真实 MCP 客户端完成 `initialize` → `tools/list` → `tools/call`，鉴权 401 行为正确。原始输出见 [EVIDENCE.txt](docs/probe-mcp-http/EVIDENCE.txt)（那次实测记录的是当时注册的 4 个工具，现已扩到 8 个） |
+| MCP 协议链路（Streamable HTTP + Bearer 鉴权） | ✅ **已实测通过**：真实 MCP 客户端完成 `initialize` → `tools/list` → `tools/call`，鉴权 401 行为正确。原始输出见 [EVIDENCE.txt](docs/probe-mcp-http/EVIDENCE.txt)（那次实测记录的是当时注册的 4 个工具，现已扩到 9 个） |
 | DSH 把本服务挂进 profile 并调用一次 | ✅ **已实测**（2026-10-17）：经 `cordis.patch.yml` 补丁层挂载成功，`mcp__sysml-agent__query_model` 真实调用返回正确结果。**手工写 `cordis.yml` 会被应用回写冲掉，必须走 `cordis.patch.yml`** |
+| DSH 右栏「模型视图」插件（[`integrations/dsh-sysml-viz/`](integrations/dsh-sysml-viz/README.md)，v0.1.4） | ✅ 本机实测：右栏 tab（模型树 + 结构/IBD/需求/状态/参数图 + 建模中状态 + 建模过程面板 + 全过程图）。只读展示层，代码在本仓库 `integrations/`，自带 `smoke-test.mjs`（33 项）；**不参与 Python 测试套件** |
 | 往返一致性（IR → 文本 → IR） | ✅ 元素级等价 + 生成字节级稳定（`parse_sysml` + `tests/test_roundtrip_v2.py`） |
 | 二期 T7–T11 | ✅ 代码与测试全部落地（**T7 的「导入老师样本模型」验收待补**，见 §10）；T12 安装规范化见 §10 与 [`docs/T12-安装验收.md`](docs/T12-安装验收.md) |
 | 需求变更 → 追溯影响面演示（方案 9.2 判据） | ✅ 真实执行记录：[`docs/demo/run-phase2-change/`](docs/demo/run-phase2-change/RUN.md) |
@@ -104,6 +105,9 @@ sysml-modeling-agent/
 │   ├── probe-mcp-http/                        #      MCP 协议链路探针与原始输出
 │   ├── probe-official-parser/                 #      官方解析器离线包 + EVIDENCE.txt
 │   └── demo/                                  #      T6 存档 + 二期需求变更演示（run-phase2-change/）
+├── integrations/                             # DSH 侧集成（JS，不参与 Python 测试）
+│   ├── README.md                             #   为什么在这里、两种摆放方式、诚实边界
+│   └── dsh-sysml-viz/                        #   右栏「模型视图」插件 bundle v0.1.4（含 smoke-test.mjs）
 ├── install.sh                                # 建 venv + 装依赖 + 注册 skill + 打印 MCP 配置
 └── README.md
 ```
@@ -335,6 +339,7 @@ python run_server.py --transport streamable-http --port 8000 --auth-token <token
 | 导出的仿真参数表长什么样 | [`docs/模拟侧参数表样例.md`](docs/模拟侧参数表样例.md) |
 | 安装脚本验收记录（真实命令输出） | [`docs/T12-安装验收.md`](docs/T12-安装验收.md) |
 | 知识库怎么规划 | [`knowledge/README.md`](knowledge/README.md) |
+| DSH 右栏模型视图插件怎么装、怎么自检、边界在哪 | [`integrations/README.md`](integrations/README.md) |
 
 ---
 

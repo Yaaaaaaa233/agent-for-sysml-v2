@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "SysML Model View",
+    "description": "Right-sidebar tab: SysML model tree, diagrams (structure, IBD, requirements, state, parameters) and live modeling status, read from the workspace IR JSON."
+  }
+}

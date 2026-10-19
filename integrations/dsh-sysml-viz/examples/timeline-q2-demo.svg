@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http&#58;//www.w3.org/2000/svg" width="1314" height="644" viewBox="0 0 1314 644" font-family="-apple-system, &#39;PingFang SC&#39;, &#39;Noto Sans SC&#39;, sans-serif">
+<rect width="1314" height="644" fill="#f8fafc"/>
+<rect width="1314" height="92" fill="#ffffff"/>
+<rect x="28" y="22" width="4" height="30" rx="2" fill="#3b82f6"/>
+<text x="44" y="42" font-size="21" font-weight="700" fill="#0f172a">建模全过程 · Q2Demo</text>
+<text x="44" y="66" font-size="12" fill="#475569">5 步 · 6 元素 · 0 关系 · 2026-10-19 20:48:53 → 2026-10-19 20:51:12</text>
+<text x="1286" y="30" text-anchor="end" font-size="10" fill="#94a3b8">生成时间 2026-10-19 23:43:20 · sysml-timeline/v1</text>
+<line x1="28" y1="92" x2="1286" y2="92" stroke="#e2e8f0" stroke-width="1"/>
+<rect x="28" y="114" width="904" height="356" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="48" y="140" font-size="13" font-weight="700" fill="#0f172a">系统生长树 · 最终模型</text>
+<text x="912" y="140" text-anchor="end" font-size="10" fill="#94a3b8">6 元素 · 3 层</text>
+<path d="M 480 206 V 225 H 133.5 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 133.5 280 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 480 206 V 225 H 308.5 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 480 206 V 225 H 468 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 480 206 V 225 H 655 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 480 206 V 225 H 842 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<g data-id="Q2Demo" data-kind="Package" data-first-seq="0">
+<title>Q2Demo · Package · 根</title>
+<rect x="400" y="170" width="160" height="36" rx="9" fill="#64748b"/>
+<text x="414" y="193" font-size="13" font-weight="700" fill="#ffffff">Q2Demo</text>
+</g>
+<g data-id="PD-Battery" data-kind="PartDefinition" data-first-seq="2">
+<title>PD-Battery · PartDefinition · 第2步新增</title>
+<rect x="67.5" y="244" width="132" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="79.5" y="267" font-size="12" font-weight="700" fill="#ffffff">BatteryPack</text>
+<circle cx="188.5" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="188.5" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="ATTR-BATTERY-KWH" data-kind="Attribute" data-first-seq="3">
+<title>ATTR-BATTERY-KWH · Attribute · 第3步新增</title>
+<rect x="52" y="318" width="163" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="64" y="341" font-size="12" font-weight="700" fill="#ffffff">ATTR_BATTERY_KWH</text>
+<circle cx="204" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="204" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="Q2DemoSystem" data-kind="PartDefinition" data-first-seq="0">
+<title>Q2DemoSystem · PartDefinition · 基线元素</title>
+<rect x="241" y="244" width="135" height="36" rx="9" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="253" y="267" font-size="12" font-weight="700" fill="#ffffff">Q2DemoSyst…</text>
+<circle cx="365" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="365" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">0</text>
+</g>
+<g data-id="PU-Battery" data-kind="PartUsage" data-first-seq="2">
+<title>PU-Battery · PartUsage · 第2步新增</title>
+<rect x="402" y="244" width="132" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="414" y="267" font-size="12" font-weight="700" fill="#ffffff">Battery</text>
+<circle cx="523" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="523" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="REQ-CRUISE-ENDURANCE" data-kind="Requirement" data-first-seq="1">
+<title>REQ-CRUISE-ENDURANCE · Requirement · 第1步新增</title>
+<rect x="560" y="244" width="190" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="572" y="267" font-size="12" font-weight="700" fill="#ffffff">REQ_CRUISE_ENDURAN…</text>
+<circle cx="739" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="739" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="C-ENDURANCE" data-kind="Constraint" data-first-seq="4">
+<title>C-ENDURANCE · Constraint · 第4步新增</title>
+<rect x="776" y="244" width="132" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="788" y="267" font-size="12" font-weight="700" fill="#ffffff">C_ENDURANCE</text>
+<circle cx="897" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="897" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<rect x="956" y="114" width="330" height="356" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="974" y="140" font-size="13" font-weight="700" fill="#0f172a">建模步骤</text>
+<text x="1268" y="140" text-anchor="end" font-size="10" fill="#94a3b8">5 步</text>
+<g data-seq="0">
+<rect x="974" y="176" width="16" height="16" rx="4" fill="#94a3b8"/>
+<text x="998" y="188" font-size="12" font-weight="700" fill="#0f172a">第 0 步</text>
+<text x="1268" y="188" text-anchor="end" font-size="10" fill="#64748b">10-19 20:48:53</text>
+<text x="998" y="204" font-size="9.5" fill="#94a3b8">会话 a89d8bff</text>
+<text x="1268" y="204" text-anchor="end" font-size="9.5" font-weight="600" fill="#64748b">基线 · 已有 1 个元素</text>
+</g>
+<line x1="974" y1="214" x2="1268" y2="214" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="1">
+<rect x="974" y="220" width="16" height="16" rx="4" fill="#3b82f6"/>
+<text x="998" y="232" font-size="12" font-weight="700" fill="#0f172a">第 1 轮</text>
+<text x="1268" y="232" text-anchor="end" font-size="10" fill="#64748b">10-19 20:49:12</text>
+<text x="998" y="248" font-size="9.5" fill="#94a3b8">会话 a89d8bff · 日志重建</text>
+<text x="1268" y="248" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+1</tspan></text>
+<text x="998" y="264" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> REQ_CRUISE_ENDURANCE</text>
+</g>
+<line x1="974" y1="272" x2="1268" y2="272" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="2">
+<rect x="974" y="278" width="16" height="16" rx="4" fill="#f59e0b"/>
+<text x="998" y="290" font-size="12" font-weight="700" fill="#0f172a">第 2 轮</text>
+<text x="1268" y="290" text-anchor="end" font-size="10" fill="#64748b">10-19 20:50:19</text>
+<text x="998" y="306" font-size="9.5" fill="#94a3b8">会话 a89d8bff · 日志重建</text>
+<text x="1268" y="306" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+2</tspan></text>
+<text x="998" y="322" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> BatteryPack、Battery</text>
+</g>
+<line x1="974" y1="330" x2="1268" y2="330" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="3">
+<rect x="974" y="336" width="16" height="16" rx="4" fill="#10b981"/>
+<text x="998" y="348" font-size="12" font-weight="700" fill="#0f172a">第 3 轮</text>
+<text x="1268" y="348" text-anchor="end" font-size="10" fill="#64748b">10-19 20:50:54</text>
+<text x="998" y="364" font-size="9.5" fill="#94a3b8">会话 a89d8bff · 日志重建</text>
+<text x="1268" y="364" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+1</tspan></text>
+<text x="998" y="380" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> ATTR_BATTERY_KWH</text>
+</g>
+<line x1="974" y1="388" x2="1268" y2="388" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="4">
+<rect x="974" y="394" width="16" height="16" rx="4" fill="#ef4444"/>
+<text x="998" y="406" font-size="12" font-weight="700" fill="#0f172a">第 4 轮</text>
+<text x="1268" y="406" text-anchor="end" font-size="10" fill="#64748b">10-19 20:51:12</text>
+<text x="998" y="422" font-size="9.5" fill="#94a3b8">会话 a89d8bff · 日志重建</text>
+<text x="1268" y="422" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+1</tspan></text>
+<text x="998" y="438" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> C_ENDURANCE</text>
+</g>
+<rect x="28" y="488" width="1258" height="132" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="48" y="512" font-size="11" font-weight="700" fill="#475569">元素数 / 步</text>
+<line x1="48" y1="600" x2="1266" y2="600" stroke="#cbd5e1" stroke-width="1"/>
+<rect x="149.8" y="587.67" width="40" height="12.33" rx="3" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="169.8" y="583.67" text-anchor="middle" font-size="8.5" fill="#475569">1</text>
+<text x="169.8" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">0</text>
+<rect x="393.4" y="575.33" width="40" height="24.67" rx="3" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="413.4" y="571.33" text-anchor="middle" font-size="8.5" fill="#475569">2</text>
+<text x="413.4" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">1</text>
+<rect x="637" y="550.67" width="40" height="49.33" rx="3" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="657" y="546.67" text-anchor="middle" font-size="8.5" fill="#475569">4</text>
+<text x="657" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">2</text>
+<rect x="880.6" y="538.33" width="40" height="61.67" rx="3" fill="#10b981" fill-opacity="0.92"/>
+<text x="900.6" y="534.33" text-anchor="middle" font-size="8.5" fill="#475569">5</text>
+<text x="900.6" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">3</text>
+<rect x="1124.2" y="526" width="40" height="74" rx="3" fill="#ef4444" fill-opacity="0.92"/>
+<text x="1144.2" y="522" text-anchor="middle" font-size="8.5" fill="#475569">6</text>
+<text x="1144.2" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">4</text>
+</svg>

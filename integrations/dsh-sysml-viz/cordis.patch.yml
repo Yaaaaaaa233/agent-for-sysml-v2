@@ -1,0 +1,28 @@
+# dsh-sysml-viz：右栏「模型视图」tab（host + client 同一个 bundle）
+# 配置全部可留空；留空时按环境变量与工作区自动发现 IR。
+- insert:
+    - id: sysml-viz
+      name: dsh-sysml-viz
+      config:
+        # 显式 IR 文件路径（绝对路径或相对 workspace）；留空则自动发现
+        model: ''
+        # 工作区根目录；留空则依次尝试 SYSML_VIZ_WORKSPACE / INIT_CWD / 进程 cwd
+        workspace: ''
+        # 是否在插件加载后自动打开「模型视图」tab（用户手动关闭后不再自动打开）
+        autoOpen: true
+        # 客户端轮询间隔（毫秒，500～60000）
+        pollMs: 2000
+        # 文件 mtime 在该窗口内视为「建模中」（毫秒）
+        modelingWindowMs: 8000
+        # 优先调用 sysml-modeling-agent/mcp-server/tools/graph.py；不可用时用内置 JS 生成
+        preferPython: true
+        # python 解释器
+        python: python3
+        # graph.py 路径；留空则自动在工作区里查找
+        graphScript: ''
+        # 建模过程记录：每次 IR 语义变化记一步（快照 + 增删改 + 会话短 id），只写 <workspace>/.sysml-viz/history/
+        history: true
+        # timeline.py 路径；留空则自动在工作区里查找（生成「建模全过程」SVG）
+        timelineScript: ''
+        # 生成过程图超时（毫秒）
+        timelineTimeoutMs: 20000

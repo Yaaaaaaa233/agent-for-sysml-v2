@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="SysML model view">
+  <defs>
+    <linearGradient id="svzG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2c6bff"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#161b26"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="13.5" fill="none" stroke="url(#svzG)" stroke-width="1.5"/>
+  <path d="M20 44 L32 20 L44 44 Z" fill="none" stroke="#5b9dff" stroke-width="2.2" stroke-linejoin="round"/>
+  <circle cx="20" cy="44" r="5" fill="#2c6bff" stroke="#9fc4ff" stroke-width="1.2"/>
+  <circle cx="32" cy="20" r="5" fill="#7c5cff" stroke="#c9b8ff" stroke-width="1.2"/>
+  <circle cx="44" cy="44" r="5" fill="#3fb9a3" stroke="#9fe8db" stroke-width="1.2"/>
+  <path d="M20 44 L44 44" stroke="#5b9dff" stroke-width="1.6" stroke-dasharray="3 3" opacity=".85"/>
+  <path d="M36.5 24.5 L44 36" stroke="#b9a6ff" stroke-width="1.4" opacity=".9"/>
+</svg>
