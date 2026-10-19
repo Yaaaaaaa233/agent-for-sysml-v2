@@ -1,0 +1,116 @@
+{
+  "schema": "sysml-viz-history/v1",
+  "workspace": "/Users/yea/Desktop/Study/比赛/2610_MBSE/sysml-modeling-agent",
+  "modelPath": "examples/golden-coaxial-power-chain/golden-coaxial-power-chain.ir.json",
+  "createdAt": "2026-10-19T12:39:00.000Z",
+  "updatedAt": "2026-10-19T12:52:00.000Z",
+  "steps": [
+    {
+      "seq": 0,
+      "at": "2026-10-19T12:40:00.000Z",
+      "revision": "bc414aaa",
+      "irSha256": "bc414aaa35f403b4e7e9b4e8371d7e5e0362087a2f2544a243713c06fc15c617",
+      "semanticSha256": "b12ee0803098f83d96c5e4840272ee487ad0d13a330e6e9ed7008491914b9f85",
+      "elements": 6,
+      "relations": 9,
+      "added": [],
+      "removed": [],
+      "changed": [],
+      "source": "baseline",
+      "sessionId": "8e56d6b9",
+      "snapshot": "step-0000-bc414aaa.ir.json"
+    },
+    {
+      "seq": 1,
+      "at": "2026-10-19T12:44:00.000Z",
+      "revision": "2560005e",
+      "irSha256": "2560005ea0a669f89ddd8ed9b67aa5f54ed8dee74abc2e048aa452c7bbb62295",
+      "semanticSha256": "e83c3ebd01a695bcd6985f998d7dbb54c31e53b5cf8292174a76defb48800d3a",
+      "elements": 13,
+      "relations": 10,
+      "added": [
+        "PART-BATTERY-PACK",
+        "PART-ESC",
+        "PART-MOTOR",
+        "PART-PROP-UPPER",
+        "PART-PROP-LOWER",
+        "PART-USAGE-SYSTEM",
+        "PART-USAGE-POWER-CHAIN"
+      ],
+      "removed": [],
+      "changed": [],
+      "source": "change",
+      "sessionId": "8e56d6b9",
+      "snapshot": "step-0001-2560005e.ir.json"
+    },
+    {
+      "seq": 2,
+      "at": "2026-10-19T12:47:00.000Z",
+      "revision": "8d086eaf",
+      "irSha256": "8d086eaff402e4e269fd6572f43bb9b7aadfd8138492708cde81e44379c51146",
+      "semanticSha256": "78f5342d23b1c6418880ed4dcaabbdc423d8158fe3e8132b88e767a9a64d1f17",
+      "elements": 20,
+      "relations": 15,
+      "added": [
+        "PART-USAGE-BATTERY",
+        "PART-USAGE-ESC",
+        "PART-USAGE-MOTOR-UPPER",
+        "PART-USAGE-MOTOR-LOWER",
+        "PART-USAGE-PROP-UPPER",
+        "PART-USAGE-PROP-LOWER",
+        "CONN-BATTERY-ESC"
+      ],
+      "removed": [],
+      "changed": [],
+      "source": "change",
+      "sessionId": "8e56d6b9",
+      "snapshot": "step-0002-8d086eaf.ir.json"
+    },
+    {
+      "seq": 3,
+      "at": "2026-10-19T12:50:00.000Z",
+      "revision": "3bfc5ff4",
+      "irSha256": "3bfc5ff41d4c4db154cb661866cebab454fe66c1fed566dd1e1d7dffa324a35b",
+      "semanticSha256": "a56a41e3cfdc93f6694b9cb5c9d01d19f7561cf51c5e1da5df3e8db31871c4d2",
+      "elements": 27,
+      "relations": 15,
+      "added": [
+        "CONN-UPPER-MOTOR-PROP",
+        "ATTR-CRUISE-SPEED",
+        "ATTR-SPEED-RATIO",
+        "ATTR-BATTERY-CAPACITY",
+        "ATTR-USABLE-FRACTION",
+        "ATTR-CRUISE-POWER",
+        "ATTR-ENDURANCE"
+      ],
+      "removed": [],
+      "changed": [],
+      "source": "change",
+      "sessionId": "8e56d6b9",
+      "snapshot": "step-0003-3bfc5ff4.ir.json"
+    },
+    {
+      "seq": 4,
+      "at": "2026-10-19T12:52:00.000Z",
+      "revision": "b3fa100b",
+      "irSha256": "b3fa100b213866f1426cd4c9335a9ec472832767763fa1c064c5a58c15cca1af",
+      "semanticSha256": "5e793ab6060795f50d4160cd747fb699fa4ba3a87dda96e366e97622f00cfc72",
+      "elements": 34,
+      "relations": 20,
+      "added": [
+        "CONSTRAINT-ENDURANCE-BUDGET",
+        "ATTR-ESC-EFFICIENCY",
+        "ATTR-MOTOR-EFFICIENCY",
+        "ATTR-PROP-EFFICIENCY",
+        "ACT-SIM-ENDURANCE",
+        "ACT-ONLINE-OPTIMIZATION",
+        "STATE-FLIGHT-MODES"
+      ],
+      "removed": [],
+      "changed": [],
+      "source": "change",
+      "sessionId": "8e56d6b9",
+      "snapshot": "step-0004-b3fa100b.ir.json"
+    }
+  ]
+}

@@ -17,11 +17,11 @@
 | 项 | 状态 |
 | --- | --- |
 | IR Schema v1（**8 种 kind** + 5 种关系） | ✅ 完成。`Constraint`（参数约束/公式）与 `Connection`（结构连接）是 **v1 增补**（2026-10-17，schema 版本号不变） |
-| **八个工具**（validate / generate / query / verify / patch / trace / parse / export） | ✅ 完成，纯函数式；契约见 §4 |
+| **九个工具**（validate / generate / query / verify / patch / trace / parse / export / **timeline**） | ✅ 完成，纯函数式；契约见 §4。`export_timeline` 为 v0.1.4 新增：读建模过程记录 → 按步骤着色的全过程 SVG |
 | MCP 服务（stdio / streamable-http + Bearer 鉴权） | ✅ 完成，契约见 §3 |
 | **五份 skill**（workflow / element-choice / anti-patterns / worked-examples / domain-patterns） | ✅ 完成：anti-patterns **16 条**、element-choice **9 个边界案例**、worked-examples **5 个范例**、domain-patterns **5 个模式** |
 | 标杆案例（**需求 + 结构 + 参数 + 行为**） | ✅ 完成：**34 元素 / 20 关系**，行为（`StateDefinition` 飞行模式状态机）已于二期补齐 |
-| 测试 | ✅ **527 个用例全绿**（含 40 余个应被拒绝的反例） |
+| 测试 | ✅ **606 个用例全绿**（含 40 余个应被拒绝的反例、25 个 timeline 用例） |
 | 官方 SysML v2 解析器 | ✅ **语法与引用解析经官方 Pilot Implementation（release 2026-08）实测 0 error**（证据：`docs/probe-official-parser/EVIDENCE.txt` §13/§14）；**语义/建模质量未验证**。日常回验仍由内置 lint + 元素级比对承担 |
 | MCP 协议链路（Streamable HTTP + Bearer 鉴权） | ✅ **已实测通过**：真实 MCP 客户端完成 `initialize` → `tools/list` → `tools/call`，鉴权 401 行为正确。原始输出见 [EVIDENCE.txt](docs/probe-mcp-http/EVIDENCE.txt)（那次实测记录的是当时注册的 4 个工具，现已扩到 8 个） |
 | DSH 把本服务挂进 profile 并调用一次 | ✅ **已实测**（2026-10-17）：经 `cordis.patch.yml` 补丁层挂载成功，`mcp__sysml-agent__query_model` 真实调用返回正确结果。**手工写 `cordis.yml` 会被应用回写冲掉，必须走 `cordis.patch.yml`** |
@@ -68,6 +68,8 @@ sysml-modeling-agent/
 │       ├── trace.py                          #   traceability（矩阵 / 缺口 / 影响面）
 │       ├── parser.py                         #   parse_sysml（文本 → IR，子集逆解析）
 │       ├── export.py                         #   export_simulink（CSV / JSON / MD 参数表）
+│       ├── graph.py                          #   图投影（sysml-graph/v1，4 视图；不画图/不做布局）
+│       ├── timeline.py                       #   建模过程 → 「建模全过程」SVG（sysml-timeline/v1）
 │       └── official_parser.py                #   官方 Pilot Implementation 适配层（可选后端）
 ├── knowledge/                                # 知识库（本期占位 + 规划说明）
 │   └── README.md
@@ -76,13 +78,14 @@ sysml-modeling-agent/
 │       ├── golden-coaxial-power-chain.ir.json #   34 元素 / 20 关系（需求+结构+参数+行为）
 │       ├── golden-coaxial-power-chain.sysml   #   生成产物，不得手改
 │       └── README.md                          #   一页说明
-├── tests/                                    # T5 + 二期 —— 527 个用例
+├── tests/                                    # T5 + 二期 —— 606 个用例
 │   ├── _support.py
 │   ├── test_validate.py  test_generate.py  test_query.py
 │   ├── test_lint_roundtrip.py  test_server.py
 │   ├── test_examples.py  test_skills.py
 │   ├── test_patch.py  test_trace.py  test_parse_sysml.py
 │   ├── test_export.py  test_roundtrip_v2.py  test_official_parser.py
+│   ├── test_graph.py  test_timeline.py
 │   ├── run_tests.sh                          #   一键运行（bash）
 │   └── run_tests.bat                         #   Windows 一键运行
 ├── docs/
@@ -95,6 +98,8 @@ sysml-modeling-agent/
 │   ├── T6-演示记录.md                         # T6 —— 端到端演示（含真实输出）
 │   ├── T12-安装验收.md                        # T12 —— install.sh 验收记录（真实命令输出）
 │   ├── 模拟侧参数表样例.md                     # T10 —— export_simulink 样例交付物
+│   ├── 图投影契约.md                          #   IR → sysml-graph/v1（graph.py 配套）
+│   ├── 建模过程记录契约.md                     #   过程记录 sysml-viz-history/v1 → timeline.svg
 │   ├── probe-pysysml2/                        #      PySysML2 实测探针与原始输出
 │   ├── probe-mcp-http/                        #      MCP 协议链路探针与原始输出
 │   ├── probe-official-parser/                 #      官方解析器离线包 + EVIDENCE.txt
@@ -187,7 +192,7 @@ python run_server.py --call export_simulink --input '{"model": {...}, "fmt": "cs
 
 ---
 
-## 4. 八个工具
+## 4. 九个工具
 
 | 工具名 | 职责 | 返回 |
 | --- | --- | --- |
@@ -199,6 +204,7 @@ python run_server.py --call export_simulink --input '{"model": {...}, "fmt": "cs
 | `traceability` | 需求追溯矩阵（4 种状态）+ 覆盖缺口 + `focus` 反向引用影响面（直接/传递/受影响需求）；`fmt="md"` 额外返回 Markdown 矩阵 | `{ok, matrix, gaps, impact, content, errors}` |
 | `parse_sysml` | 文本 → IR（**只解析本工具链的渲染子集**）；子集外构造逐条进 `unsupported`（带行号）并令 `ok=false`；名字→id 不唯一时报 `E-PARSE-AMBIGUOUS` / `E-PARSE-UNRESOLVED`，不猜 | `{ok, model, warnings, unsupported, errors, stats}` |
 | `export_simulink` | 把 `Attribute` / `Constraint` / 需求阈值导出成仿真侧参数表（`csv` BOM+CRLF / `json` / `md`），参数值直接取自 IR | `{ok, content, rows, notes, errors}` |
+| `export_timeline` | 读建模过程记录（`<workspace>/.sysml-viz/history/` 的 index + 每步快照）→ **「建模全过程」SVG**：生长树按元素首次出现步骤着色、图例含每步时间/会话/轮次/增量、底部元素数曲线。`history_dir` 不传时自动向上查找；不修改 IR | `{ok, schema:"sysml-timeline/v1", svgPath, summary, steps, errors, warnings}` |
 
 工具对 DSH 呈现为 `mcp__sysml-agent__<工具名>`。
 
@@ -208,19 +214,20 @@ python run_server.py --call export_simulink --input '{"model": {...}, "fmt": "cs
 **推荐调用顺序**（与 `run_server.py` 的 `INSTRUCTIONS` 一致）：
 `query_model` 查现状 → 填/改 IR JSON → `validate_model_json` 改到 errors 为空 →
 （可选 `patch_model`，改完回到 validate）→ `generate_sysml` → `verify_sysml`（可带 `official`）→
-可选 `parse_sysml` 往返 → `traceability` 查覆盖与影响面 → `export_simulink` 出参数表。
+可选 `parse_sysml` 往返 → `traceability` 查覆盖与影响面 → `export_simulink` 出参数表 →
+（可选）`export_timeline` 出建模全过程图。
 
 ---
 
 ## 5. 跑测试
 
 ```bash
-./tests/run_tests.sh          # 527 个用例，详细输出；追加 -q 安静模式
+./tests/run_tests.sh          # 606 个用例，详细输出；追加 -q 安静模式
 PYTHON=python3.12 ./tests/run_tests.sh
 cd tests && python3 -m unittest discover -s . -t .    # 手工跑也可以
 ```
 
-只用标准库 `unittest`，**不依赖 pytest**。当前 **527 个用例**，覆盖：
+只用标准库 `unittest`，**不依赖 pytest**。当前 **606 个用例**，覆盖：
 
 - 各类**应被拒绝**的反例（缺 `acceptanceCriteria`、`relations.target` 悬空、同 owner 重名、
   `kind` 枚举自创、数值字段写成字符串、`typeRef` 悬空……）

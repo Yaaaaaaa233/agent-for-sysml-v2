@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http&#58;//www.w3.org/2000/svg" width="5762" height="644" viewBox="0 0 5762 644" font-family="-apple-system, &#39;PingFang SC&#39;, &#39;Noto Sans SC&#39;, sans-serif">
+<rect width="5762" height="644" fill="#f8fafc"/>
+<rect width="5762" height="92" fill="#ffffff"/>
+<rect x="28" y="22" width="4" height="30" rx="2" fill="#3b82f6"/>
+<text x="44" y="42" font-size="21" font-weight="700" fill="#0f172a">建模全过程 · CoaxialOctoRotor</text>
+<text x="44" y="66" font-size="12" fill="#475569">5 步 · 34 元素 · 20 关系 · 2026-10-19 20:40:00 → 2026-10-19 20:52:00</text>
+<text x="5734" y="30" text-anchor="end" font-size="10" fill="#94a3b8">生成时间 2026-10-19 21:00:00 · sysml-timeline/v1</text>
+<line x1="28" y1="92" x2="5734" y2="92" stroke="#e2e8f0" stroke-width="1"/>
+<rect x="28" y="114" width="5352" height="356" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="48" y="140" font-size="13" font-weight="700" fill="#0f172a">系统生长树 · 最终模型</text>
+<text x="928" y="140" text-anchor="end" font-size="10" fill="#94a3b8">34 元素 · 3 层</text>
+<path d="M 2704 206 V 225 H 245 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 245 280 V 299 H 137 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 245 280 V 299 H 343 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 576.5 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 576.5 280 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 793 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 793 280 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 1931 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 963 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 1121 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 1279 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 1437 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 1603.5 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 1778.5 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 1946.5 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 2114.5 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 2307 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 2503 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 2674.5 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 1931 280 V 299 H 2866.5 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 3057 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 3215 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 3536 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 3536 280 V 299 H 3373 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 3536 280 V 299 H 3531 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 3536 280 V 299 H 3694 V 318" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 3857 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 4027 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 4212.5 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 4405 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 4608 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 4831.5 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 5065 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M 2704 206 V 225 H 5274.5 V 244" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+<g data-id="CoaxialOctoRotor" data-kind="Package" data-first-seq="0">
+<title>CoaxialOctoRotor · Package · 根</title>
+<rect x="2622" y="170" width="164" height="36" rx="9" fill="#64748b"/>
+<text x="2636" y="193" font-size="13" font-weight="700" fill="#ffffff">CoaxialOctoRotor</text>
+</g>
+<g data-id="PART-BATTERY-PACK" data-kind="PartDefinition" data-first-seq="1">
+<title>PART-BATTERY-PACK · PartDefinition · 第1步新增</title>
+<rect x="179" y="244" width="132" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="191" y="267" font-size="12" font-weight="700" fill="#ffffff">BatteryPack</text>
+<circle cx="300" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="300" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="ATTR-BATTERY-CAPACITY" data-kind="Attribute" data-first-seq="3">
+<title>ATTR-BATTERY-CAPACITY · Attribute · 第3步新增</title>
+<rect x="52" y="318" width="170" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="64" y="341" font-size="12" font-weight="700" fill="#ffffff">batteryCapacityWh</text>
+<circle cx="211" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="211" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="ATTR-USABLE-FRACTION" data-kind="Attribute" data-first-seq="3">
+<title>ATTR-USABLE-FRACTION · Attribute · 第3步新增</title>
+<rect x="248" y="318" width="190" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="260" y="341" font-size="12" font-weight="700" fill="#ffffff">usableEnergyFracti…</text>
+<circle cx="427" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="427" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="PART-ESC" data-kind="PartDefinition" data-first-seq="1">
+<title>PART-ESC · PartDefinition · 第1步新增</title>
+<rect x="464" y="244" width="225" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="476" y="267" font-size="12" font-weight="700" fill="#ffffff">ElectronicSpeedControll…</text>
+<circle cx="678" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="678" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="ATTR-ESC-EFFICIENCY" data-kind="Attribute" data-first-seq="4">
+<title>ATTR-ESC-EFFICIENCY · Attribute · 第4步新增</title>
+<rect x="505.5" y="318" width="142" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="517.5" y="341" font-size="12" font-weight="700" fill="#ffffff">escEfficiency</text>
+<circle cx="636.5" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="636.5" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<g data-id="PART-MOTOR" data-kind="PartDefinition" data-first-seq="1">
+<title>PART-MOTOR · PartDefinition · 第1步新增</title>
+<rect x="718.5" y="244" width="149" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="730.5" y="267" font-size="12" font-weight="700" fill="#ffffff">BrushlessMotor</text>
+<circle cx="856.5" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="856.5" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="ATTR-MOTOR-EFFICIENCY" data-kind="Attribute" data-first-seq="4">
+<title>ATTR-MOTOR-EFFICIENCY · Attribute · 第4步新增</title>
+<rect x="715" y="318" width="156" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="727" y="341" font-size="12" font-weight="700" fill="#ffffff">motorEfficiency</text>
+<circle cx="860" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="860" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<g data-id="PART-POWER-CHAIN" data-kind="PartDefinition" data-first-seq="0">
+<title>PART-POWER-CHAIN · PartDefinition · 基线元素</title>
+<rect x="1865" y="244" width="132" height="36" rx="9" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="1877" y="267" font-size="12" font-weight="700" fill="#ffffff">PowerChain</text>
+<circle cx="1986" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1986" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">0</text>
+</g>
+<g data-id="PART-USAGE-BATTERY" data-kind="PartUsage" data-first-seq="2">
+<title>PART-USAGE-BATTERY · PartUsage · 第2步新增</title>
+<rect x="897" y="318" width="132" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="909" y="341" font-size="12" font-weight="700" fill="#ffffff">batteryPack</text>
+<circle cx="1018" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1018" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="PART-USAGE-ESC" data-kind="PartUsage" data-first-seq="2">
+<title>PART-USAGE-ESC · PartUsage · 第2步新增</title>
+<rect x="1055" y="318" width="132" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="1067" y="341" font-size="12" font-weight="700" fill="#ffffff">escUnit</text>
+<circle cx="1176" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1176" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="PART-USAGE-MOTOR-LOWER" data-kind="PartUsage" data-first-seq="2">
+<title>PART-USAGE-MOTOR-LOWER · PartUsage · 第2步新增</title>
+<rect x="1213" y="318" width="132" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="1225" y="341" font-size="12" font-weight="700" fill="#ffffff">lowerMotor</text>
+<circle cx="1334" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1334" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="PART-USAGE-MOTOR-UPPER" data-kind="PartUsage" data-first-seq="2">
+<title>PART-USAGE-MOTOR-UPPER · PartUsage · 第2步新增</title>
+<rect x="1371" y="318" width="132" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="1383" y="341" font-size="12" font-weight="700" fill="#ffffff">upperMotor</text>
+<circle cx="1492" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1492" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="PART-USAGE-PROP-LOWER" data-kind="PartUsage" data-first-seq="2">
+<title>PART-USAGE-PROP-LOWER · PartUsage · 第2步新增</title>
+<rect x="1529" y="318" width="149" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="1541" y="341" font-size="12" font-weight="700" fill="#ffffff">lowerPropeller</text>
+<circle cx="1667" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1667" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="PART-USAGE-PROP-UPPER" data-kind="PartUsage" data-first-seq="2">
+<title>PART-USAGE-PROP-UPPER · PartUsage · 第2步新增</title>
+<rect x="1704" y="318" width="149" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="1716" y="341" font-size="12" font-weight="700" fill="#ffffff">upperPropeller</text>
+<circle cx="1842" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1842" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="ATTR-CRUISE-POWER" data-kind="Attribute" data-first-seq="3">
+<title>ATTR-CRUISE-POWER · Attribute · 第3步新增</title>
+<rect x="1879" y="318" width="135" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="1891" y="341" font-size="12" font-weight="700" fill="#ffffff">cruisePowe…</text>
+<circle cx="2003" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="2003" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="ATTR-ENDURANCE" data-kind="Attribute" data-first-seq="3">
+<title>ATTR-ENDURANCE · Attribute · 第3步新增</title>
+<rect x="2040" y="318" width="149" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="2052" y="341" font-size="12" font-weight="700" fill="#ffffff">enduranceHours</text>
+<circle cx="2178" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="2178" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="ATTR-PROP-EFFICIENCY" data-kind="Attribute" data-first-seq="4">
+<title>ATTR-PROP-EFFICIENCY · Attribute · 第4步新增</title>
+<rect x="2215" y="318" width="184" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="2227" y="341" font-size="12" font-weight="700" fill="#ffffff">propellerEfficiency</text>
+<circle cx="2388" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="2388" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<g data-id="CONSTRAINT-ENDURANCE-BUDGET" data-kind="Constraint" data-first-seq="4">
+<title>CONSTRAINT-ENDURANCE-BUDGET · Constraint · 第4步新增</title>
+<rect x="2425" y="318" width="156" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="2437" y="341" font-size="12" font-weight="700" fill="#ffffff">EnduranceBudget</text>
+<circle cx="2570" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="2570" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<g data-id="CONN-BATTERY-ESC" data-kind="Connection" data-first-seq="2">
+<title>CONN-BATTERY-ESC · Connection · 第2步新增</title>
+<rect x="2607" y="318" width="135" height="36" rx="9" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="2619" y="341" font-size="12" font-weight="700" fill="#ffffff">batteryToE…</text>
+<circle cx="2731" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="2731" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">2</text>
+</g>
+<g data-id="CONN-UPPER-MOTOR-PROP" data-kind="Connection" data-first-seq="3">
+<title>CONN-UPPER-MOTOR-PROP · Connection · 第3步新增</title>
+<rect x="2768" y="318" width="197" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="2780" y="341" font-size="12" font-weight="700" fill="#ffffff">upperMotorToPropell…</text>
+<circle cx="2954" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="2954" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="PART-PROP-LOWER" data-kind="PartDefinition" data-first-seq="1">
+<title>PART-PROP-LOWER · PartDefinition · 第1步新增</title>
+<rect x="2991" y="244" width="132" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="3003" y="267" font-size="12" font-weight="700" fill="#ffffff">LowerRotor</text>
+<circle cx="3112" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="3112" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="PART-PROP-UPPER" data-kind="PartDefinition" data-first-seq="1">
+<title>PART-PROP-UPPER · PartDefinition · 第1步新增</title>
+<rect x="3149" y="244" width="132" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="3161" y="267" font-size="12" font-weight="700" fill="#ffffff">UpperRotor</text>
+<circle cx="3270" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="3270" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="PART-STRUCT-SYSTEM" data-kind="PartDefinition" data-first-seq="0">
+<title>PART-STRUCT-SYSTEM · PartDefinition · 基线元素</title>
+<rect x="3434" y="244" width="204" height="36" rx="9" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="3446" y="267" font-size="12" font-weight="700" fill="#ffffff">CoaxialOctoRotorSyst…</text>
+<circle cx="3627" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="3627" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">0</text>
+</g>
+<g data-id="PART-USAGE-POWER-CHAIN" data-kind="PartUsage" data-first-seq="1">
+<title>PART-USAGE-POWER-CHAIN · PartUsage · 第1步新增</title>
+<rect x="3307" y="318" width="132" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="3319" y="341" font-size="12" font-weight="700" fill="#ffffff">powerChain</text>
+<circle cx="3428" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="3428" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="ATTR-CRUISE-SPEED" data-kind="Attribute" data-first-seq="3">
+<title>ATTR-CRUISE-SPEED · Attribute · 第3步新增</title>
+<rect x="3465" y="318" width="132" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="3477" y="341" font-size="12" font-weight="700" fill="#ffffff">cruiseSpeed</text>
+<circle cx="3586" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="3586" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="ATTR-SPEED-RATIO" data-kind="Attribute" data-first-seq="3">
+<title>ATTR-SPEED-RATIO · Attribute · 第3步新增</title>
+<rect x="3623" y="318" width="142" height="36" rx="9" fill="#10b981" fill-opacity="0.92"/>
+<text x="3635" y="341" font-size="12" font-weight="700" fill="#ffffff">speedRatioEta</text>
+<circle cx="3754" cy="329" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="3754" y="332" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">3</text>
+</g>
+<g data-id="PART-USAGE-SYSTEM" data-kind="PartUsage" data-first-seq="1">
+<title>PART-USAGE-SYSTEM · PartUsage · 第1步新增</title>
+<rect x="3791" y="244" width="132" height="36" rx="9" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="3803" y="267" font-size="12" font-weight="700" fill="#ffffff">x8System</text>
+<circle cx="3912" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="3912" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">1</text>
+</g>
+<g data-id="REQ-CRUISE-ENDURANCE" data-kind="Requirement" data-first-seq="0">
+<title>REQ-CRUISE-ENDURANCE · Requirement · 基线元素</title>
+<rect x="3949" y="244" width="156" height="36" rx="9" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="3961" y="267" font-size="12" font-weight="700" fill="#ffffff">CruiseEndurance</text>
+<circle cx="4094" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="4094" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">0</text>
+</g>
+<g data-id="REQ-MISSION-ENDURANCE" data-kind="Requirement" data-first-seq="0">
+<title>REQ-MISSION-ENDURANCE · Requirement · 基线元素</title>
+<rect x="4131" y="244" width="163" height="36" rx="9" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="4143" y="267" font-size="12" font-weight="700" fill="#ffffff">MissionEndurance</text>
+<circle cx="4283" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="4283" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">0</text>
+</g>
+<g data-id="REQ-POWER-BUDGET" data-kind="Requirement" data-first-seq="0">
+<title>REQ-POWER-BUDGET · Requirement · 基线元素</title>
+<rect x="4320" y="244" width="170" height="36" rx="9" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="4332" y="267" font-size="12" font-weight="700" fill="#ffffff">CruisePowerBudget</text>
+<circle cx="4479" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="4479" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">0</text>
+</g>
+<g data-id="REQ-ROTOR-SPEED-RATIO" data-kind="Requirement" data-first-seq="0">
+<title>REQ-ROTOR-SPEED-RATIO · Requirement · 基线元素</title>
+<rect x="4516" y="244" width="184" height="36" rx="9" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="4528" y="267" font-size="12" font-weight="700" fill="#ffffff">RotorSpeedRatioBand</text>
+<circle cx="4689" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="4689" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">0</text>
+</g>
+<g data-id="ACT-ONLINE-OPTIMIZATION" data-kind="ActionDefinition" data-first-seq="4">
+<title>ACT-ONLINE-OPTIMIZATION · ActionDefinition · 第4步新增</title>
+<rect x="4726" y="244" width="211" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="4738" y="267" font-size="12" font-weight="700" fill="#ffffff">OnlinePowerOptimizati…</text>
+<circle cx="4926" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="4926" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<g data-id="ACT-SIM-ENDURANCE" data-kind="ActionDefinition" data-first-seq="4">
+<title>ACT-SIM-ENDURANCE · ActionDefinition · 第4步新增</title>
+<rect x="4963" y="244" width="204" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="4975" y="267" font-size="12" font-weight="700" fill="#ffffff">EnduranceSimulationR…</text>
+<circle cx="5156" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="5156" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<g data-id="STATE-FLIGHT-MODES" data-kind="StateDefinition" data-first-seq="4">
+<title>STATE-FLIGHT-MODES · StateDefinition · 第4步新增</title>
+<rect x="5193" y="244" width="163" height="36" rx="9" fill="#ef4444" fill-opacity="0.92"/>
+<text x="5205" y="267" font-size="12" font-weight="700" fill="#ffffff">FlightModeStates</text>
+<circle cx="5345" cy="255" r="9" fill="#ffffff" fill-opacity="0.95"/>
+<text x="5345" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#334155">4</text>
+</g>
+<rect x="5404" y="114" width="330" height="356" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="5422" y="140" font-size="13" font-weight="700" fill="#0f172a">建模步骤</text>
+<text x="5716" y="140" text-anchor="end" font-size="10" fill="#94a3b8">5 步</text>
+<g data-seq="0">
+<rect x="5422" y="176" width="16" height="16" rx="4" fill="#94a3b8"/>
+<text x="5446" y="188" font-size="12" font-weight="700" fill="#0f172a">第 0 步</text>
+<text x="5716" y="188" text-anchor="end" font-size="10" fill="#64748b">10-19 20:40:00</text>
+<text x="5446" y="204" font-size="9.5" fill="#94a3b8">会话 8e56d6b9</text>
+<text x="5716" y="204" text-anchor="end" font-size="9.5" font-weight="600" fill="#64748b">基线 · 已有 6 个元素</text>
+</g>
+<line x1="5422" y1="214" x2="5716" y2="214" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="1">
+<rect x="5422" y="220" width="16" height="16" rx="4" fill="#3b82f6"/>
+<text x="5446" y="232" font-size="12" font-weight="700" fill="#0f172a">第 1 步</text>
+<text x="5716" y="232" text-anchor="end" font-size="10" fill="#64748b">10-19 20:44:00</text>
+<text x="5446" y="248" font-size="9.5" fill="#94a3b8">会话 8e56d6b9</text>
+<text x="5716" y="248" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+7</tspan></text>
+<text x="5446" y="264" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> BatteryPack、ElectronicSpeedController、B… 等 7 个</text>
+</g>
+<line x1="5422" y1="272" x2="5716" y2="272" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="2">
+<rect x="5422" y="278" width="16" height="16" rx="4" fill="#f59e0b"/>
+<text x="5446" y="290" font-size="12" font-weight="700" fill="#0f172a">第 2 步</text>
+<text x="5716" y="290" text-anchor="end" font-size="10" fill="#64748b">10-19 20:47:00</text>
+<text x="5446" y="306" font-size="9.5" fill="#94a3b8">会话 8e56d6b9</text>
+<text x="5716" y="306" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+7</tspan></text>
+<text x="5446" y="322" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> batteryPack、escUnit、upperMotor、lowerMo… 等 7 个</text>
+</g>
+<line x1="5422" y1="330" x2="5716" y2="330" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="3">
+<rect x="5422" y="336" width="16" height="16" rx="4" fill="#10b981"/>
+<text x="5446" y="348" font-size="12" font-weight="700" fill="#0f172a">第 3 步</text>
+<text x="5716" y="348" text-anchor="end" font-size="10" fill="#64748b">10-19 20:50:00</text>
+<text x="5446" y="364" font-size="9.5" fill="#94a3b8">会话 8e56d6b9</text>
+<text x="5716" y="364" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+7</tspan></text>
+<text x="5446" y="380" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> upperMotorToPropeller、cruiseSpeed、speed… 等 7 个</text>
+</g>
+<line x1="5422" y1="388" x2="5716" y2="388" stroke="#e2e8f0" stroke-width="1"/>
+<g data-seq="4">
+<rect x="5422" y="394" width="16" height="16" rx="4" fill="#ef4444"/>
+<text x="5446" y="406" font-size="12" font-weight="700" fill="#0f172a">第 4 步</text>
+<text x="5716" y="406" text-anchor="end" font-size="10" fill="#64748b">10-19 20:52:00</text>
+<text x="5446" y="422" font-size="9.5" fill="#94a3b8">会话 8e56d6b9</text>
+<text x="5716" y="422" text-anchor="end" font-size="9.5" font-weight="600"><tspan fill="#059669">+7</tspan></text>
+<text x="5446" y="438" font-size="10" fill="#64748b"><tspan fill="#10b981" font-weight="700">＋</tspan> EnduranceBudget、escEfficiency、motorEffi… 等 7 个</text>
+</g>
+<rect x="28" y="488" width="5706" height="132" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="48" y="512" font-size="11" font-weight="700" fill="#475569">元素数 / 步</text>
+<line x1="48" y1="600" x2="5714" y2="600" stroke="#cbd5e1" stroke-width="1"/>
+<rect x="594.6" y="586.94" width="40" height="13.06" rx="3" fill="#94a3b8" fill-opacity="0.92"/>
+<text x="614.6" y="582.94" text-anchor="middle" font-size="8.5" fill="#475569">6</text>
+<text x="614.6" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">0</text>
+<rect x="1727.8" y="571.71" width="40" height="28.29" rx="3" fill="#3b82f6" fill-opacity="0.92"/>
+<text x="1747.8" y="567.71" text-anchor="middle" font-size="8.5" fill="#475569">13</text>
+<text x="1747.8" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">1</text>
+<rect x="2861" y="556.47" width="40" height="43.53" rx="3" fill="#f59e0b" fill-opacity="0.92"/>
+<text x="2881" y="552.47" text-anchor="middle" font-size="8.5" fill="#475569">20</text>
+<text x="2881" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">2</text>
+<rect x="3994.2" y="541.24" width="40" height="58.76" rx="3" fill="#10b981" fill-opacity="0.92"/>
+<text x="4014.2" y="537.24" text-anchor="middle" font-size="8.5" fill="#475569">27</text>
+<text x="4014.2" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">3</text>
+<rect x="5127.4" y="526" width="40" height="74" rx="3" fill="#ef4444" fill-opacity="0.92"/>
+<text x="5147.4" y="522" text-anchor="middle" font-size="8.5" fill="#475569">34</text>
+<text x="5147.4" y="613" text-anchor="middle" font-size="8.5" fill="#94a3b8">4</text>
+</svg>

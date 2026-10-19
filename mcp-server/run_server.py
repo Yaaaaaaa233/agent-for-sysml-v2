@@ -54,6 +54,7 @@ from tools.parser import parse_sysml  # noqa: E402
 from tools.patch import patch_model  # noqa: E402
 from tools.query import query_model  # noqa: E402
 from tools.sysml_lint import lint_sysml, roundtrip_check  # noqa: E402
+from tools.timeline import export_timeline as export_timeline_svg  # noqa: E402
 from tools.trace import traceability  # noqa: E402
 from tools.validator import load_model, validate_model_json  # noqa: E402
 
@@ -78,7 +79,9 @@ SysML v2 建模智能体（二期）。核心路线是「LLM 填表、代码建�
 6. verify_sysml  回验（lint + 元素级比对）；可选 official=true，在后端可用时
    额外调用官方 Pilot Implementation，结果放在返回的 official 键（不可用会如实标注）；
 7. 可选：parse_sysml 做一次往返（文本 → IR），确认 IR 元素级等价、两次生成逐字节一致；
-8. traceability  追溯检查——需求矩阵 / 缺口 / 影响面。
+8. traceability  追溯检查——需求矩阵 / 缺口 / 影响面；
+9. 可选：export_timeline  把 .sysml-viz/history/ 的建模步骤渲染成「建模全过程」SVG，
+   用于回答"每一轮对话各加了什么"；不给 history_dir 时从 model_path / 当前工作目录往上找。
 
 导出仿真参数表用 export_simulink（csv/json/md），不要手工抄参数。
 出错时改 JSON，不要改文本——文本是代码生成的，手改会漂移。
@@ -295,6 +298,37 @@ TOOL_SPECS: List[Dict[str, Any]] = [
             "required": ["model"],
         },
     },
+    {
+        "name": "export_timeline",
+        "description": (
+            "把建模过程记录（<workspace>/.sysml-viz/history/ 的 index.json + 每步 IR 快照）"
+            "渲染成「建模全过程」SVG：最终系统生长树按元素首次出现的步骤着色，右侧图例列出"
+            "每步时间 / 会话短 id / 新增元素，底部是元素数曲线。history_dir 不传时从 model_path"
+            "（若有）或当前工作目录向上查找 .sysml-viz/history。不修改 IR，只写 SVG。"
+            "返回 {ok, schema:'sysml-timeline/v1', svgPath, summary, steps, errors, warnings}。"
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "history_dir": {
+                    "type": "string",
+                    "description": "历史目录（含 index.json 与 step-*.ir.json）；默认自动发现",
+                },
+                "model_path": {
+                    "type": "string",
+                    "description": "可选：当前 IR 文件路径，用于反推工作区的 .sysml-viz/history",
+                },
+                "output": {
+                    "type": "string",
+                    "description": "输出 SVG 路径；默认 <history_dir>/timeline.svg",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "可选标题，默认「建模全过程 · <包名>」",
+                },
+            },
+        },
+    },
 ]
 
 TOOL_NAMES = [spec["name"] for spec in TOOL_SPECS]
@@ -369,6 +403,70 @@ def call_traceability(
     return traceability(model, focus=focus, fmt=fmt)
 
 
+def _discover_history_dir(model_path: Optional[str] = None) -> Optional[str]:
+    """从 env / model_path / cwd 向上找 ``.sysml-viz/history``（最多 7 层）。
+
+    优先 ``SYSML_VIZ_HISTORY``（显式目录）；其次从 model 文件所在目录与当前工作目录
+    逐级向上找含 ``index.json`` 的 ``.sysml-viz/history``。
+    """
+    explicit = os.environ.get("SYSML_VIZ_HISTORY")
+    if explicit:
+        return explicit
+    starts: List[Path] = []
+    if model_path:
+        try:
+            starts.append(Path(model_path).expanduser().resolve().parent)
+        except (OSError, ValueError):
+            pass
+    try:
+        starts.append(Path.cwd())
+    except OSError:
+        pass
+    seen = set()
+    for start in starts:
+        current = start
+        for _ in range(7):
+            candidate = current / ".sysml-viz" / "history"
+            key = str(candidate)
+            if key not in seen:
+                seen.add(key)
+                if (candidate / "index.json").is_file():
+                    return key
+            parent = current.parent
+            if parent == current:
+                break
+            current = parent
+    return None
+
+
+def call_export_timeline(
+    history_dir: Optional[str] = None,
+    model_path: Optional[str] = None,
+    output: Optional[str] = None,
+    title: Optional[str] = None,
+) -> Dict[str, Any]:
+    """把建模过程记录渲染成「建模全过程」SVG（``tools.timeline.export_timeline``）。
+
+    没显式给 ``history_dir`` 时自动发现；找不到就让底层返回 ``E-HISTORY-NOT-FOUND``，
+    并补一条说明，避免调用方误以为服务坏了。
+    """
+    resolved = history_dir or _discover_history_dir(model_path)
+    fallback = str(Path.cwd() / ".sysml-viz" / "history")
+    result = export_timeline_svg(resolved or fallback, out_path=output, title=title)
+    if resolved is None and result.get("ok") is not True:
+        errors = result.get("errors")
+        if not isinstance(errors, list):
+            errors = []
+        if not any(isinstance(item, dict) and item.get("code") == "E-HISTORY-NOT-FOUND" for item in errors):
+            errors.insert(0, {
+                "code": "E-HISTORY-NOT-FOUND",
+                "message": "未找到 .sysml-viz/history/index.json；请传 history_dir，"
+                           "或先把模型视图 tab 打开让插件记录基线。",
+            })
+        result["errors"] = errors
+    return result
+
+
 def dispatch(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """按工具名分发，供本地调用模式使用。"""
     if tool_name == "validate_model_json":
@@ -416,6 +514,13 @@ def dispatch(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
             arguments.get("model"),
             fmt=arguments.get("fmt", "csv"),
             scope=arguments.get("scope", "all"),
+        )
+    if tool_name == "export_timeline":
+        return call_export_timeline(
+            history_dir=arguments.get("history_dir"),
+            model_path=arguments.get("model_path"),
+            output=arguments.get("output"),
+            title=arguments.get("title"),
         )
     return {
         "ok": False,
@@ -595,6 +700,20 @@ def build_server(auth_token: Optional[str]):
     def _export_simulink(model: dict, fmt: str = "csv", scope: str = "all") -> dict:
         return call_export_simulink(model, fmt=fmt, scope=scope)
 
+    @server.tool(
+        name="export_timeline",
+        description=SPEC_BY_NAME["export_timeline"]["description"],
+    )
+    def _export_timeline(
+        history_dir: Optional[str] = None,
+        model_path: Optional[str] = None,
+        output: Optional[str] = None,
+        title: Optional[str] = None,
+    ) -> dict:
+        return call_export_timeline(
+            history_dir=history_dir, model_path=model_path, output=output, title=title
+        )
+
     return server, source
 
 
@@ -627,6 +746,10 @@ _LOCAL_ARGUMENT_KEYS = frozenset(
         "validate",
         "official",
         "scope",
+        "history_dir",
+        "model_path",
+        "output",
+        "title",
     }
 )
 
@@ -755,7 +878,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="run_server.py",
         description="sysml-modeling-agent —— MCP 工具服务"
-        "（validate / generate / query / verify / patch / trace / parse / export）",
+        "（validate / generate / query / verify / patch / trace / parse / export / timeline）",
     )
     parser.add_argument(
         "--transport",

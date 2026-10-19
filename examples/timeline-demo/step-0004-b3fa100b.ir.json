@@ -1,0 +1,590 @@
+{
+  "schema": "sysml-ir/v1",
+  "package": "CoaxialOctoRotor",
+  "meta": {
+    "title": "共轴八旋翼（X8）功率链标杆案例（需求 + 结构 + 参数 + 行为）",
+    "source": "2610_MBSE 项目；《SysML建模智能体技术方案》7.3 标杆案例",
+    "note": "T4 骨架范围：需求 + 结构 + 参数。二期补齐（2026-10-17）：行为——新增 1 个 StateDefinition（FlightModeStates 飞行模式状态机，5 状态 5 迁移）。v1 增补（2026-10-17）：Constraint（续航换算公式）与 Connection（电池→电调、上桨电机→上桨）。数值仍为占位示例值，非实测结论。"
+  },
+  "elements": [
+    {
+      "id": "REQ-MISSION-ENDURANCE",
+      "kind": "Requirement",
+      "name": "MissionEndurance",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "text": "任务级续航：共轴八旋翼须按指定任务剖面完成起飞、巡航与安全返航。",
+        "acceptanceCriteria": "在标称任务剖面（含 0.5 h 裕度）下，全程可用飞行时间 T_mission >= 5.0 h，且降落时电池剩余电量 >= 15%。",
+        "verifyMethod": "simulation",
+        "rationale": "任务书对滞空时长的总体要求，是下层续航需求的分解源头。",
+        "priority": "high",
+        "minMissionDurationHours": 5.0,
+        "minLandingReserveFraction": 0.15
+      },
+      "relations": [
+        {
+          "type": "decomposes",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "任务级续航分解为巡航段的续航需求"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "PART-POWER-CHAIN",
+          "rationale": "由功率链（电池→电调→电机→桨）的整体能量效率保障"
+        }
+      ]
+    },
+    {
+      "id": "REQ-CRUISE-ENDURANCE",
+      "kind": "Requirement",
+      "name": "CruiseEndurance",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "text": "巡航时间不低于 4 小时",
+        "acceptanceCriteria": "在巡航速度 v 与转速比 eta 的稳态工作点下，满电续航时间 T >= 4.0 h",
+        "verifyMethod": "simulation",
+        "rationale": "任务剖面的巡航段占主要时长，单列为可验证条目。",
+        "priority": "high",
+        "minEnduranceHours": 4.0
+      },
+      "relations": [
+        {
+          "type": "refines",
+          "target": "REQ-MISSION-ENDURANCE",
+          "rationale": "由任务级续航需求分解而来"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "PART-BATTERY-PACK",
+          "rationale": "由电池包可用能量与放电效率保障"
+        }
+      ]
+    },
+    {
+      "id": "REQ-ROTOR-SPEED-RATIO",
+      "kind": "Requirement",
+      "name": "RotorSpeedRatioBand",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "text": "在线寻优给出的上下桨转速比 eta 必须落在允许工作区间内。",
+        "acceptanceCriteria": "对任意寻优输出满足 0.75 <= eta <= 1.25；且任一时刻任一桨的转速不超过其额定上限。",
+        "verifyMethod": "simulation",
+        "rationale": "转速比过小或过大会使共轴双桨进入气动干涉区，效率骤降并加剧振动。",
+        "priority": "high",
+        "minSpeedRatio": 0.75,
+        "maxSpeedRatio": 1.25,
+        "maxRotorSpeedRpm": 6200.0
+      },
+      "relations": [
+        {
+          "type": "refines",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "转速比区间是达成巡航续航的技术手段约束"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "ACT-ONLINE-OPTIMIZATION",
+          "rationale": "由在线功率优化功能在寻优时施加区间约束"
+        }
+      ]
+    },
+    {
+      "id": "REQ-POWER-BUDGET",
+      "kind": "Requirement",
+      "name": "CruisePowerBudget",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "text": "巡航稳态下整机电功率不超过电池可持续放电功率上限。",
+        "acceptanceCriteria": "P_cruise <= 0.9 * P_batt_max，其中 P_batt_max 为电池包持续放电功率额定值。",
+        "verifyMethod": "analysis",
+        "rationale": "功率超限会同时破坏续航与电池寿命。",
+        "priority": "medium",
+        "maxCruisePowerW": 260.0,
+        "batteryDeratingFactor": 0.9
+      },
+      "relations": [
+        {
+          "type": "refines",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "功率预算是续航指标的能量侧约束"
+        },
+        {
+          "type": "satisfiedBy",
+          "target": "PART-POWER-CHAIN",
+          "rationale": "由功率链各环节的效率与选型共同保障"
+        }
+      ]
+    },
+    {
+      "id": "PART-STRUCT-SYSTEM",
+      "kind": "PartDefinition",
+      "name": "CoaxialOctoRotorSystem",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "共轴八旋翼整机系统（X8）：四根机臂，每臂上下两副桨共轴叠放。"
+      },
+      "relations": [
+        {
+          "type": "decomposes",
+          "target": "PART-POWER-CHAIN",
+          "rationale": "整机在结构上分解为功率链等子系统"
+        }
+      ]
+    },
+    {
+      "id": "PART-POWER-CHAIN",
+      "kind": "PartDefinition",
+      "name": "PowerChain",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "功率链：电池 → 电调 → 电机 → 桨；上下桨各占一条并联支路。"
+      }
+    },
+    {
+      "id": "PART-BATTERY-PACK",
+      "kind": "PartDefinition",
+      "name": "BatteryPack",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "动力锂电池包，为整机提供能量。"
+      }
+    },
+    {
+      "id": "PART-ESC",
+      "kind": "PartDefinition",
+      "name": "ElectronicSpeedController",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "电子调速器，把电池直流电按转速指令调制后驱动电机。"
+      }
+    },
+    {
+      "id": "PART-MOTOR",
+      "kind": "PartDefinition",
+      "name": "BrushlessMotor",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "无刷直流电机，把电功率转换为轴功率。"
+      }
+    },
+    {
+      "id": "PART-PROP-UPPER",
+      "kind": "PartDefinition",
+      "name": "UpperRotor",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "共轴对的上桨，转速为上桨转速 n_upper。"
+      }
+    },
+    {
+      "id": "PART-PROP-LOWER",
+      "kind": "PartDefinition",
+      "name": "LowerRotor",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "共轴对的下桨，转速为下桨转速 n_lower。"
+      }
+    },
+    {
+      "id": "PART-USAGE-SYSTEM",
+      "kind": "PartUsage",
+      "name": "x8System",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "typeRef": "PART-STRUCT-SYSTEM",
+        "quantity": 1,
+        "description": "本架共轴八旋翼的顶层实例（模型中唯一一份整机）。"
+      },
+      "relations": [
+        {
+          "type": "satisfiedBy",
+          "target": "REQ-MISSION-ENDURANCE",
+          "rationale": "整机实例承载任务级续航需求"
+        }
+      ]
+    },
+    {
+      "id": "PART-USAGE-POWER-CHAIN",
+      "kind": "PartUsage",
+      "name": "powerChain",
+      "owner": "PART-STRUCT-SYSTEM",
+      "properties": {
+        "typeRef": "PART-POWER-CHAIN",
+        "quantity": 1,
+        "description": "整机中功率链的那一份实例。"
+      }
+    },
+    {
+      "id": "PART-USAGE-BATTERY",
+      "kind": "PartUsage",
+      "name": "batteryPack",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-BATTERY-PACK",
+        "quantity": 1,
+        "description": "功率链电源端。"
+      },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USAGE-ESC",
+          "rationale": "电池直流母线馈入八路电调"
+        }
+      ]
+    },
+    {
+      "id": "PART-USAGE-ESC",
+      "kind": "PartUsage",
+      "name": "escUnit",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-ESC",
+        "quantity": 8,
+        "description": "八路电调，每副桨一路。"
+      },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USAGE-MOTOR-UPPER",
+          "rationale": "电调按转速指令驱动上桨电机"
+        },
+        {
+          "type": "connects",
+          "target": "PART-USAGE-MOTOR-LOWER",
+          "rationale": "同一路电调的另一支路驱动下桨电机"
+        }
+      ]
+    },
+    {
+      "id": "PART-USAGE-MOTOR-UPPER",
+      "kind": "PartUsage",
+      "name": "upperMotor",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-MOTOR",
+        "quantity": 4,
+        "description": "四根机臂上的上桨电机。"
+      },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USAGE-PROP-UPPER",
+          "rationale": "上桨电机把轴功率传给上桨"
+        }
+      ]
+    },
+    {
+      "id": "PART-USAGE-MOTOR-LOWER",
+      "kind": "PartUsage",
+      "name": "lowerMotor",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-MOTOR",
+        "quantity": 4,
+        "description": "四根机臂上的下桨电机。"
+      },
+      "relations": [
+        {
+          "type": "connects",
+          "target": "PART-USAGE-PROP-LOWER",
+          "rationale": "下桨电机把轴功率传给下桨"
+        }
+      ]
+    },
+    {
+      "id": "PART-USAGE-PROP-UPPER",
+      "kind": "PartUsage",
+      "name": "upperPropeller",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-PROP-UPPER",
+        "quantity": 4
+      }
+    },
+    {
+      "id": "PART-USAGE-PROP-LOWER",
+      "kind": "PartUsage",
+      "name": "lowerPropeller",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "typeRef": "PART-PROP-LOWER",
+        "quantity": 4
+      }
+    },
+    {
+      "id": "CONN-BATTERY-ESC",
+      "kind": "Connection",
+      "name": "batteryToEsc",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USAGE-BATTERY",
+        "targetRef": "PART-USAGE-ESC",
+        "flowKind": "electrical",
+        "description": "电池直流母线馈入八路电调。"
+      }
+    },
+    {
+      "id": "CONN-UPPER-MOTOR-PROP",
+      "kind": "Connection",
+      "name": "upperMotorToPropeller",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "sourceRef": "PART-USAGE-MOTOR-UPPER",
+        "targetRef": "PART-USAGE-PROP-UPPER",
+        "flowKind": "mechanical",
+        "description": "上桨电机把轴功率传给上桨。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-SPEED",
+      "kind": "Attribute",
+      "name": "cruiseSpeed",
+      "owner": "PART-STRUCT-SYSTEM",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 15.0,
+        "unit": "m/s",
+        "description": "巡航平飞速度 v，在线寻优的两个决策量之一。"
+      }
+    },
+    {
+      "id": "ATTR-SPEED-RATIO",
+      "kind": "Attribute",
+      "name": "speedRatioEta",
+      "owner": "PART-STRUCT-SYSTEM",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 1.0,
+        "description": "上下桨转速比 eta = n_upper / n_lower，无量纲；在线寻优的另一个决策量。"
+      }
+    },
+    {
+      "id": "ATTR-BATTERY-CAPACITY",
+      "kind": "Attribute",
+      "name": "batteryCapacityWh",
+      "owner": "PART-BATTERY-PACK",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 1200.0,
+        "unit": "Wh",
+        "description": "电池包标称容量 E_batt。"
+      }
+    },
+    {
+      "id": "ATTR-USABLE-FRACTION",
+      "kind": "Attribute",
+      "name": "usableEnergyFraction",
+      "owner": "PART-BATTERY-PACK",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.8,
+        "description": "可安全放出的容量占比（扣除降落裕度与低压保护），无量纲。"
+      }
+    },
+    {
+      "id": "ATTR-CRUISE-POWER",
+      "kind": "Attribute",
+      "name": "cruisePowerW",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 240.0,
+        "unit": "W",
+        "description": "巡航稳态整机电功率 P_cruise；由各环节效率链折算：P_cruise = P_shaft / (eta_esc * eta_motor * eta_prop)，其中 P_shaft 为上下桨轴功率之和。"
+      }
+    },
+    {
+      "id": "ATTR-ENDURANCE",
+      "kind": "Attribute",
+      "name": "enduranceHours",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 4.0,
+        "unit": "h",
+        "description": "续航换算：T = E_batt * usableEnergyFraction / P_cruise。代入 1200 Wh、0.8、240 W 得 T = 4.0 h，恰好满足 REQ-CRUISE-ENDURANCE 的下限。"
+      }
+    },
+    {
+      "id": "CONSTRAINT-ENDURANCE-BUDGET",
+      "kind": "Constraint",
+      "name": "EnduranceBudget",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "expression": "T = batteryCapacityWh * usableEnergyFraction / cruisePowerW",
+        "parameters": [
+          "ATTR-BATTERY-CAPACITY",
+          "ATTR-USABLE-FRACTION",
+          "ATTR-CRUISE-POWER",
+          "ATTR-ENDURANCE"
+        ],
+        "description": "续航换算约束：电池可用能量除以巡航功率得到续航时间。parameters 把公式里的符号绑定到 Attribute 元素；1200 Wh / 0.8 / 240 W / 4.0 h 均为占位示例值，非实测结论。"
+      }
+    },
+    {
+      "id": "ATTR-ESC-EFFICIENCY",
+      "kind": "Attribute",
+      "name": "escEfficiency",
+      "owner": "PART-ESC",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.95,
+        "description": "电调效率 eta_esc，无量纲。"
+      }
+    },
+    {
+      "id": "ATTR-MOTOR-EFFICIENCY",
+      "kind": "Attribute",
+      "name": "motorEfficiency",
+      "owner": "PART-MOTOR",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.85,
+        "description": "电机效率 eta_motor，无量纲。"
+      }
+    },
+    {
+      "id": "ATTR-PROP-EFFICIENCY",
+      "kind": "Attribute",
+      "name": "propellerEfficiency",
+      "owner": "PART-POWER-CHAIN",
+      "properties": {
+        "valueType": "Real",
+        "defaultValue": 0.72,
+        "description": "共轴双桨的气动效率 eta_prop（含上下桨气动干涉损失与逆风漂移），无量纲。"
+      }
+    },
+    {
+      "id": "ACT-SIM-ENDURANCE",
+      "kind": "ActionDefinition",
+      "name": "EnduranceSimulationRun",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "续航仿真工况：在给定 v 与 eta 的稳态工作点上跑能耗模型，输出续航时间。",
+        "inputs": [
+          {
+            "name": "cruiseSpeed",
+            "typeRef": "Real",
+            "unit": "m/s"
+          },
+          {
+            "name": "speedRatioEta",
+            "typeRef": "Real"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "enduranceHours",
+            "typeRef": "Real",
+            "unit": "h"
+          }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-CRUISE-ENDURANCE",
+          "rationale": "该仿真工况直接验证巡航续航指标"
+        },
+        {
+          "type": "verifies",
+          "target": "REQ-MISSION-ENDURANCE",
+          "rationale": "任务剖面续航同样由该仿真工况给出"
+        },
+        {
+          "type": "verifies",
+          "target": "REQ-POWER-BUDGET",
+          "rationale": "同一仿真同时输出稳态电功率，用于核对功率预算"
+        }
+      ]
+    },
+    {
+      "id": "ACT-ONLINE-OPTIMIZATION",
+      "kind": "ActionDefinition",
+      "name": "OnlinePowerOptimization",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "在线功率优化：边飞边算，实时求解使 P_cruise 最小的 (v, eta)，并把转速比约束在允许区间内。",
+        "inputs": [
+          {
+            "name": "powerTelemetry",
+            "typeRef": "Real",
+            "unit": "W"
+          },
+          {
+            "name": "airspeedEstimate",
+            "typeRef": "Real",
+            "unit": "m/s"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "speedRatioEta",
+            "typeRef": "Real"
+          },
+          {
+            "name": "cruiseSpeed",
+            "typeRef": "Real",
+            "unit": "m/s"
+          }
+        ]
+      },
+      "relations": [
+        {
+          "type": "verifies",
+          "target": "REQ-ROTOR-SPEED-RATIO",
+          "rationale": "仿真中校验寻优输出始终落在 [0.75, 1.25]"
+        },
+        {
+          "type": "decomposes",
+          "target": "ACT-SIM-ENDURANCE",
+          "rationale": "在线优化的寻优结果交由续航仿真工况评价"
+        }
+      ]
+    },
+    {
+      "id": "STATE-FLIGHT-MODES",
+      "kind": "StateDefinition",
+      "name": "FlightModeStates",
+      "owner": "CoaxialOctoRotor",
+      "properties": {
+        "description": "飞行模式状态机：初始态为起飞段，起飞爬升完成（完成迁移，不挂 trigger/guard）后转入巡航；巡航可被返航指令或转速比越界事件打断；返航与故障两条路径都以触地检测收束到降落完成态。guard 里的 0.75 是占位阈值（对应 REQ-ROTOR-SPEED-RATIO 的下限），非实测结论。",
+        "states": [
+          "Takeoff",
+          "Cruise",
+          "ReturnToHome",
+          "Fault",
+          "Landed"
+        ],
+        "initial": "Takeoff",
+        "transitions": [
+          {
+            "from": "Takeoff",
+            "to": "Cruise"
+          },
+          {
+            "from": "Cruise",
+            "to": "ReturnToHome",
+            "trigger": "返航指令或任务段剩余时间不足"
+          },
+          {
+            "from": "Cruise",
+            "to": "Fault",
+            "trigger": "转速比越界或功率遥测持续异常",
+            "guard": "x8System.speedRatioEta <= 0.75"
+          },
+          {
+            "from": "ReturnToHome",
+            "to": "Landed",
+            "trigger": "触地检测（起落架受压）"
+          },
+          {
+            "from": "Fault",
+            "to": "Landed",
+            "trigger": "迫降完成（触地检测）"
+          }
+        ]
+      }
+    }
+  ]
+}

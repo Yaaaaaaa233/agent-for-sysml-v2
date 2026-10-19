@@ -148,7 +148,7 @@ class TestCliContract(unittest.TestCase):
 class TestLocalInvokeMode(unittest.TestCase):
     """不装 MCP 依赖时的等价退路：--list-tools / --call。"""
 
-    def test_list_tools_exposes_all_eight_tools(self):
+    def test_list_tools_exposes_all_nine_tools(self):
         result = run_cli("--list-tools")
         self.assertEqual(result.returncode, 0)
         payload = json.loads(result.stdout)
@@ -164,17 +164,22 @@ class TestLocalInvokeMode(unittest.TestCase):
                 "traceability",
                 "parse_sysml",
                 "export_simulink",
+                "export_timeline",
             ],
         )
         for tool in payload["tools"]:
             self.assertIn("description", tool)
             self.assertIn("inputSchema", tool)
-            # parse_sysml 的入参是文本，其余工具都以 IR model 为入口
-            if tool["name"] != "parse_sysml":
+            # parse_sysml 的入参是文本、export_timeline 的入参是历史目录，其余工具都以 IR model 为入口
+            if tool["name"] not in {"parse_sysml", "export_timeline"}:
                 self.assertIn("model", tool["inputSchema"]["properties"])
         parse_spec = next(tool for tool in payload["tools"] if tool["name"] == "parse_sysml")
         self.assertEqual(parse_spec["inputSchema"]["required"], ["text"])
         self.assertIn("渲染子集", parse_spec["description"])
+        timeline_spec = next(tool for tool in payload["tools"] if tool["name"] == "export_timeline")
+        for key in ("history_dir", "model_path", "output", "title"):
+            self.assertIn(key, timeline_spec["inputSchema"]["properties"])
+        self.assertNotIn("required", timeline_spec["inputSchema"])
 
     def test_query_schema_supports_path_and_drops_required_model(self):
         payload = json.loads(run_cli("--list-tools").stdout)
@@ -323,6 +328,82 @@ class TestLocalInvokeMode(unittest.TestCase):
         self.assertTrue(payload["ok"], msg=payload["errors"])
         self.assertIn("path,name,valueType,unit,defaultValue,kind,id,extra",
                       payload["content"].lstrip("\ufeff"))
+
+    def test_call_export_timeline(self):
+        """本地调用模式能渲染「建模全过程」SVG（不依赖插件/浏览器）。"""
+        import hashlib
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history = Path(tmp) / "history"
+            history.mkdir()
+            baseline = {
+                "schema": "sysml-ir/v1",
+                "package": "TimelineDemo",
+                "elements": [
+                    {"id": "PD-A", "kind": "PartDefinition", "name": "A",
+                     "owner": "TimelineDemo", "properties": {}},
+                ],
+            }
+            step1 = json.loads(json.dumps(baseline))
+            step1["elements"].append({
+                "id": "REQ-A", "kind": "Requirement", "name": "ReqA",
+                "owner": "TimelineDemo",
+                "properties": {"text": "x", "acceptanceCriteria": "x",
+                               "verifyMethod": "analysis"},
+            })
+
+            def snapshot(seq: int, model: dict):
+                text = json.dumps(model, ensure_ascii=False, indent=2) + "\n"
+                digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+                name = "step-%04d-%s.ir.json" % (seq, digest[:8])
+                (history / name).write_text(text, encoding="utf-8")
+                return name, digest
+
+            s0, h0 = snapshot(0, baseline)
+            s1, h1 = snapshot(1, step1)
+            index = {
+                "schema": "sysml-viz-history/v1",
+                "workspace": tmp,
+                "modelPath": str(Path(tmp) / "demo.ir.json"),
+                "steps": [
+                    {"seq": 0, "at": "2026-10-19T12:00:00Z", "revision": h0[:8],
+                     "irSha256": h0, "semanticSha256": h0, "elements": 1,
+                     "relations": 0, "added": [], "removed": [], "changed": [],
+                     "source": "baseline", "sessionId": "deadbeef", "snapshot": s0},
+                    {"seq": 1, "at": "2026-10-19T12:01:00Z", "revision": h1[:8],
+                     "irSha256": h1, "semanticSha256": h1, "elements": 2,
+                     "relations": 0, "added": ["REQ-A"], "removed": [],
+                     "changed": [], "source": "change", "sessionId": "deadbeef",
+                     "turn": 1, "snapshot": s1},
+                ],
+            }
+            (history / "index.json").write_text(
+                json.dumps(index, ensure_ascii=False), encoding="utf-8"
+            )
+            result = run_cli(
+                "--call", "export_timeline",
+                "--input", json.dumps({"history_dir": str(history)}),
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertTrue(payload["ok"], msg=payload.get("errors"))
+            self.assertEqual(payload["schema"], "sysml-timeline/v1")
+            self.assertEqual(payload["summary"]["steps"], 2)
+            svg = Path(payload["svgPath"]).read_text(encoding="utf-8")
+            self.assertIn("<svg", svg)
+            self.assertIn("建模全过程", svg)
+            self.assertIn("ReqA", svg)
+            self.assertIn("第 1 轮", svg)  # 有 turn 时图例显示对话轮次
+
+        # 无历史目录 → 结构化失败，不抛异常
+        result = run_cli(
+            "--call", "export_timeline", "--input",
+            json.dumps({"history_dir": "/definitely/not/here/history"}),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["errors"][0]["code"], "E-HISTORY-NOT-FOUND")
 
     def test_verify_official_unavailable_is_reported_honestly(self):
         """没有后端时 official 必须是 unavailable，且不得被当成通过。"""
@@ -478,6 +559,7 @@ class TestToolWrappers(unittest.TestCase):
         self.assertEqual(set(run_server.TOOL_NAMES), {
             "validate_model_json", "generate_sysml", "query_model", "verify_sysml",
             "patch_model", "traceability", "parse_sysml", "export_simulink",
+            "export_timeline",
         })
         model = json.loads(GOLDEN_IR.read_text(encoding="utf-8"))
         arguments = {
@@ -486,6 +568,14 @@ class TestToolWrappers(unittest.TestCase):
             "ops": [],
         }
         for name in run_server.TOOL_NAMES:
+            if name == "export_timeline":
+                # export_timeline 不吃 model；用不存在的临时目录验证「返回 dict 而非抛异常」
+                with tempfile.TemporaryDirectory() as tmp:
+                    payload = run_server.dispatch(name, {"history_dir": tmp})
+                    self.assertIsInstance(payload, dict)
+                    self.assertFalse(payload["ok"])
+                    self.assertEqual(payload["errors"][0]["code"], "E-HISTORY-NOT-FOUND")
+                continue
             self.assertIsInstance(run_server.dispatch(name, arguments), dict)
 
     def test_dispatch_patch_model_matches_direct_call(self):
@@ -684,8 +774,8 @@ class TestQueryRootDefault(unittest.TestCase):
     def test_server_version_is_1_1_0(self):
         self.assertEqual(self.run_server.SERVER_VERSION, "1.1.0")
 
-    def test_eight_tools_registered(self):
-        self.assertEqual(len(self.run_server.TOOL_NAMES), 8)
+    def test_nine_tools_registered(self):
+        self.assertEqual(len(self.run_server.TOOL_NAMES), 9)
         self.assertEqual(
             self.run_server.TOOL_NAMES,
             [
@@ -697,6 +787,7 @@ class TestQueryRootDefault(unittest.TestCase):
                 "traceability",
                 "parse_sysml",
                 "export_simulink",
+                "export_timeline",
             ],
         )
 
