@@ -110,12 +110,13 @@ DSH 桌面端的宿主进程 cwd 是 **profile 目录**（`~/.dsh/profiles/deskt
 ## 4. 打开「模型视图」
 
 - **自动**：新会话选择「SysML v2 建模」预设后，当前会话的右栏会自动打开模型视图（如果
-  `autoOpen=true`、窗口 ≥768px、用户没在这个会话里显式关过、右栏没有该 tab）；右栏若本来是空的，
-  会先打开文件预览（files）再打开模型视图，避免默认页丢失。
-- **手动（始终可用）**：会话 header 里本插件注册的「▦ 模型视图」按钮；或右栏 tab 条的添加控件 →
-  引导页里的「模型视图」入口。
+  `autoOpen=true`、窗口 ≥768px、用户没在这个会话里显式关过、右栏没有该 tab）。右栏为空时
+  **只打开模型视图**，不再先播种文件 tab。
+- **手动**：SysML 会话 header 里有本插件注册的「▦ 模型视图」按钮；其他预设不显示该按钮，
+  从右栏 tab 条的添加控件 → 引导页里的「模型视图」入口进入。
 - **关闭**：正常关闭即可；该会话会记住「不要自动打开」（`localStorage` 键
   `dsh.sysml-viz.dismissed.<sessionId>`）。想恢复自动打开：开发者工具删掉该键，或直接用 header 按钮。
+  注意：模型视图是唯一 tab 时，关闭它会收起整列右栏（DSH 规则），header 按钮可重开。
 
 ## 5. 与文件预览 / 其它 tab 共存
 
@@ -129,7 +130,8 @@ DSH 桌面端的宿主进程 cwd 是 **profile 目录**（`~/.dsh/profiles/deskt
 - preset **只决定该会话可见的工具/提示词**，不控制 UI；右栏自动打开由 client 半边读取
   `projectionValues.agentPreset === 'sysml-v2'` 决定。
 - 配置错误会显示在预设列表里（不静默）；**已开始的会话不能切换 preset**，只能新开会话。
-- 安装后不要求一定用该 preset：其它预设会话也可以从 header 按钮手动打开模型视图。
+- 安装后不要求一定用该 preset：其它预设会话可以从右栏默认页的「模型视图」卡片进入
+  （header 按钮只在 SysML 会话显示）。
 
 ### 6.1 推荐：工具只在 SysML 模式出现（用户已选此方案）
 
@@ -212,7 +214,9 @@ failOnStartupError: true   # 连接失败时让 preset 显式 broken，而不是
    - `presets.compositions[]` 的 `modules[]` 里应包含 `@deepseek-ai/dsh-mcp-client`。
 
 3. 前端：右栏出现「模型视图」tab，树/图/修订号/建模中状态可见；改一下 IR 文件（或让 agent 建模），
-   2s 内图与修订号刷新，刚变更的元素带高亮。
+   2s 内图与修订号刷新，刚变更的元素带高亮。画布滚轮缩放、按住拖动；拖到边缘仍会留一小块可见，
+   「适应」按实际画布重新 fit。悬停图节点时左树对应行高亮；若祖先折叠，会临时展开并滚动，
+   鼠标离开后恢复原来的折叠状态与滚动位置。
 4. 过程面板（v0.1.4）：点视图 chip 行末尾的「过程」→ 应看到基线/步骤列表；让 agent 再改一次模型，
    刷新后应多一步并显示 `+N`；点「生成过程图」应显示按步骤着色的 SVG（文件同时写在
    `<workspace>/.sysml-viz/history/timeline.svg`）。「清空记录」后步骤回到 1 条基线。
@@ -225,12 +229,12 @@ failOnStartupError: true   # 连接失败时让 preset 显式 broken，而不是
 
 ## 8. 已知限制
 
-- **真机状态（v0.1.4）**：已在本机桌面端安装（profile `desktop`，symlink 到本目录），v0.1.1–v0.1.3
-  已在真机跑通（工作区定位、与文件 tab 共存、MCP 工具按 preset 出现）；**v0.1.4 的 host/client 改动
-  需重启 DSH 才生效**（host 半边是进程内模块，不会热替换）。
+- **真机状态（v0.1.6）**：已在本机桌面端安装（profile `desktop`，symlink 到本目录），v0.1.1–v0.1.6
+  已在真机跑通（工作区定位、与文件 tab 共存、MCP 工具按 preset 出现、画布缩放/平移、悬停联动）；
+  **host/client 改动需重启 DSH 才生效**（host 半边是进程内模块，不会热替换）。
 - 过程记录是拉取式的：没有模型视图 tab 在轮询时不落步骤；会话归属来自 tab 的 `?sessionId=`，
   精确不到对话轮次。
-- 图布局是 host 侧简化确定性布局（`graph.py` 只做投影、不做布局）；大模型可能拥挤，需缩放/滚动。
+- 图布局是 host 侧简化确定性布局（`graph.py` 只做投影、不做布局）；大模型可能拥挤，需缩放/平移。
 - Electron（`file://`）下相对 `/api/...` fetch 是否走 IPC 桥接未验证；Web 同源模式可用。
 - 轮询刷新（2s）而非 SSE；「建模中」是 mtime 窗口 + `.sysml-viz/modeling` 标记的近似判断。
 - 追溯关系图来自 IR 投影（文本里 trace 仅为注释），IBD 展示 2 条真实 Connection + connects 投影。

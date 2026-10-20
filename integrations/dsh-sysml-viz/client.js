@@ -93,7 +93,7 @@ window.__ModuleLoader__.load({
       'error.poll': '刷新失败，显示上一次成功的数据。',
       'empty.title': '未找到可绘制的视图',
       'empty.hint': 'IR 里没有 PartDefinition / Requirement / StateDefinition 等可投影元素。',
-      'canvas.hint': '点击节点查看元素 ID；滚轮/按钮缩放，缩小后可拖动滚动条浏览全图。',
+      'canvas.hint': '点击节点查看元素 ID；滚轮缩放，拖动平移；悬停节点会在左侧树中定位。',
       'selected': '已选：{label}',
       'model.path': '模型：{path}',
       'view.nodes': '{nodes} 节点 / {edges} 关系',
@@ -170,7 +170,7 @@ window.__ModuleLoader__.load({
       'error.poll': 'Refresh failed; showing the last successful data.',
       'empty.title': 'No drawable views',
       'empty.hint': 'The IR has no PartDefinition / Requirement / StateDefinition elements to project.',
-      'canvas.hint': 'Click a node for its element ID; zoom with the buttons and scroll the canvas.',
+      'canvas.hint': 'Click a node for its element ID; scroll to zoom, drag to pan; hover to locate it in the tree.',
       selected: 'Selected: {label}',
       'model.path': 'Model: {path}',
       'view.nodes': '{nodes} nodes / {edges} edges',
@@ -265,6 +265,7 @@ window.__ModuleLoader__.load({
 .svz-tab-btn.on{background:var(--svz-hover);color:var(--svz-label);border-color:var(--svz-border)}
 .svz-tnode{display:flex;align-items:center;gap:4px;padding:2.5px 5px;border-radius:5px;cursor:pointer;white-space:nowrap;overflow:hidden;font-size:11.5px;color:var(--svz-label2)}
 .svz-tnode:hover{background:var(--svz-hover);color:var(--svz-label)}
+.svz-tnode.hov{background:rgba(76,141,255,.13);color:#d7e6ff;box-shadow:inset 2px 0 0 #4c8dff}
 .svz-tnode.sel{background:rgba(76,141,255,.16);color:#cfe0ff}
 .svz-tnode .svz-caret{width:10px;flex:none;text-align:center;color:var(--svz-label3);font-size:9px}
 .svz-tnode .svz-ico{width:13px;flex:none;text-align:center;color:#8fb6ff;font-size:10px}
@@ -272,15 +273,19 @@ window.__ModuleLoader__.load({
 .svz-tnode .svz-lbl{overflow:hidden;text-overflow:ellipsis}
 .svz-tnode .svz-cnt{margin-left:auto;color:var(--svz-label3);font-size:9px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;padding-left:4px}
 .svz-canvas-col{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;min-height:0}
-.svz-viewbar{flex:none;display:flex;align-items:center;gap:5px;padding:5px 7px;border-bottom:1px solid var(--svz-border);overflow-x:auto;scrollbar-width:thin}
+.svz-viewbar{flex:none;display:flex;align-items:center;gap:5px;padding:5px 7px;border-bottom:1px solid var(--svz-border);overflow:hidden}
+.svz-viewchips{flex:1 1 auto;display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:thin}
 .svz-viewchip{flex:none;display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:11px;border:1px solid var(--svz-border);background:transparent;color:var(--svz-label2);font-size:10.5px;cursor:pointer;white-space:nowrap}
 .svz-viewchip:hover{color:var(--svz-label);border-color:var(--svz-label3)}
 .svz-viewchip.on{color:#cfe0ff;border-color:rgba(76,141,255,.55);background:rgba(76,141,255,.14)}
 .svz-viewchip .svz-kdot{width:5px;height:5px;border-radius:50%;flex:none}
 .svz-zoombar{margin-left:auto;display:flex;align-items:center;gap:3px;flex:none}
 .svz-zoomval{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;color:var(--svz-label3);min-width:34px;text-align:center}
-.svz-canvas-wrap{flex:1 1 auto;min-height:0;overflow:auto;position:relative;background:var(--dsw-alias-bg-base,#14161a);scrollbar-width:thin}
-.svz-svg{display:block;margin:0 auto}
+.svz-canvas-wrap{flex:1 1 auto;min-height:0;overflow:hidden;position:relative;background:var(--dsw-alias-bg-base,#14161a);cursor:grab;touch-action:none;user-select:none}
+.svz-canvas-wrap.dragging{cursor:grabbing}
+.svz-canvas-wrap.dragging *{cursor:grabbing!important}
+.svz-canvas-stage{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.svz-svg{display:block;margin:0}
 .svz-loading,.svz-empty,.svz-error{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;color:var(--svz-label2);min-height:0}
 .svz-loading .svz-spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--svz-border);border-top-color:#4c8dff;animation:svzSpin .8s linear infinite}
 @keyframes svzSpin{to{transform:rotate(360deg)}}
@@ -303,6 +308,7 @@ window.__ModuleLoader__.load({
 .svz-node{cursor:pointer}
 .svz-node .svz-nbg{fill:var(--svz-layer1,#1b1e24);stroke:var(--dsw-alias-border-l3,#3a424e);stroke-width:1.1;transition:stroke .12s}
 .svz-node:hover .svz-nbg{stroke:var(--svz-label3,#6c7683)}
+.svz-node.svz-hov .svz-nbg{stroke:#6ea8ff;stroke-width:1.8;filter:drop-shadow(0 0 3px rgba(76,141,255,.45))}
 .svz-node.svz-sel .svz-nbg{stroke:#4c8dff;stroke-width:2}
 .svz-node.svz-new .svz-nbg{animation:svzNew 1.5s ease-out 2}
 @keyframes svzNew{0%{stroke:#4c8dff;stroke-width:2.6}100%{stroke:var(--dsw-alias-border-l3,#3a424e);stroke-width:1.1}}
@@ -541,6 +547,49 @@ window.__ModuleLoader__.load({
       return `${value.slice(0, maxLength - 1)}…`
     }
 
+    const CANVAS_PADDING = 22
+
+    /** 树节点的元素 id：elementId 优先，兼容 def:/el: 前缀 id。 */
+    function treeNodeElementId(node) {
+      if (!node) return null
+      if (node.elementId) return String(node.elementId)
+      const id = typeof node.id === 'string' ? node.id : ''
+      if (id.startsWith('def:')) return id.slice(4)
+      if (id.startsWith('el:')) return id.slice(3)
+      return null
+    }
+
+    /** 画布 fit 比例：保持不超过自然尺寸，超大图允许缩到 8%。 */
+    function computeFitScale(view, size) {
+      if (!view) return 1
+      const availableW = Math.max(80, size.w - CANVAS_PADDING * 2)
+      const availableH = Math.max(80, size.h - CANVAS_PADDING * 2)
+      return Math.max(0.08, Math.min(1, Math.min(
+        availableW / Math.max(1, view.width),
+        availableH / Math.max(1, view.height),
+      )))
+    }
+
+    function centeredPan(view, size, scale) {
+      return {
+        x: (size.w - view.width * scale) / 2,
+        y: (size.h - view.height * scale) / 2,
+      }
+    }
+
+    /** 近自由平移：只要求内容至少留 keep 像素可见，范围以居中位置为轴左右对称。 */
+    function clampPan(view, size, scale, pan) {
+      const contentW = Math.max(1, view.width * scale)
+      const contentH = Math.max(1, view.height * scale)
+      const keep = Math.max(32, Math.min(120, Math.round(Math.min(size.w, size.h) * 0.15)))
+      const axis = (value, viewport, content) => {
+        const lo = keep - content
+        const hi = viewport - keep
+        return Math.min(hi, Math.max(lo, value))
+      }
+      return { x: axis(pan.x, size.w, contentW), y: axis(pan.y, size.h, contentH) }
+    }
+
     function edgeGeometry(edge, nodeMap) {
       const fromNode = nodeMap.get(edge.from)
       const toNode = nodeMap.get(edge.to)
@@ -671,9 +720,10 @@ window.__ModuleLoader__.load({
       return elements
     }
 
-    function renderNode(node, selectedNodeId, addedElementIds, sessionAddedIds, onSelect) {
+    function renderNode(node, selectedNodeId, addedElementIds, sessionAddedIds, hoveredNodeId, onSelect, onHover) {
       const classes = ['svz-node', `svz-k-${node.kind}`]
       if (selectedNodeId === node.id) classes.push('svz-sel')
+      if (hoveredNodeId === node.id) classes.push('svz-hov')
       if (node.elementId && addedElementIds.has(node.elementId)) classes.push('svz-new')
       if (node.elementId && sessionAddedIds.has(node.elementId)) classes.push('svz-session')
       const shape = node.kind === 'state'
@@ -691,12 +741,14 @@ window.__ModuleLoader__.load({
         'data-element-id': node.elementId || undefined,
         onClick: (event) => {
           event.stopPropagation()
-          onSelect(node)
+          onSelect(node, event)
         },
+        onMouseEnter: () => onHover(node),
+        onMouseLeave: () => onHover(null, node),
       }, [shape, ...renderNodeLines(node)])
     }
 
-    function renderSvg(view, width, height, selectedNodeId, addedElementIds, sessionAddedIds, onSelect, onBackground) {
+    function renderSvg(view, selectedNodeId, addedElementIds, sessionAddedIds, hoveredNodeId, onSelect, onHover, onBackground) {
       const nodeMap = new Map((view.nodes || []).map((node) => [node.id, node]))
       const groups = Array.isArray(view.groups) ? view.groups : []
       const edges = Array.isArray(view.edges) ? view.edges : []
@@ -714,17 +766,18 @@ window.__ModuleLoader__.load({
         h('defs', { key: 'defs' }, markers),
         ...groups.map((group) => renderGroup(group)),
         ...edges.map((edge) => renderEdge(edge, nodeMap)).filter(Boolean),
-        ...(view.nodes || []).map((node) => renderNode(node, selectedNodeId, addedElementIds, sessionAddedIds, onSelect)),
+        ...(view.nodes || []).map((node) => renderNode(node, selectedNodeId, addedElementIds, sessionAddedIds, hoveredNodeId, onSelect, onHover)),
       ]
       return h('svg', {
         className: 'svz-svg',
-        width,
-        height,
+        width: view.width,
+        height: view.height,
         viewBox: `0 0 ${view.width} ${view.height}`,
         preserveAspectRatio: 'xMinYMin meet',
         role: 'img',
         'aria-label': view.title,
         onClick: onBackground,
+        onMouseLeave: () => onHover(null),
       }, children)
     }
 
@@ -758,7 +811,9 @@ window.__ModuleLoader__.load({
       const [treeOpen, setTreeOpen] = useState(true)
       const [collapsed, setCollapsed] = useState(() => new Set())
       const [selectedNodeId, setSelectedNodeId] = useState(null)
-      const [zoom, setZoom] = useState(1)
+      const [viewTransform, setViewTransform] = useState({ zoom: 1, x: 0, y: 0 })
+      const [dragging, setDragging] = useState(false)
+      const [hovered, setHovered] = useState(null)
       const [narrow, setNarrow] = useState(false)
       const [canvasSize, setCanvasSize] = useState({ w: 640, h: 480 })
       const [refreshTick, setRefreshTick] = useState(0)
@@ -772,8 +827,49 @@ window.__ModuleLoader__.load({
       const revisionRef = useRef(null)
       const rootRef = useRef(null)
       const canvasRef = useRef(null)
+      const canvasObserverRef = useRef(null)
+      const treeRef = useRef(null)
       const treeTouchedRef = useRef(false)
       const aliveRef = useRef(true)
+      const dragRef = useRef(null)
+      const suppressClickUntilRef = useRef(0)
+      const viewIdRef = useRef(null)
+      const activeViewRef = useRef(null)
+      const canvasSizeRef = useRef(canvasSize)
+      const fitScaleRef = useRef(1)
+      const transformRef = useRef(viewTransform)
+      const autoExpandedRef = useRef(new Set())
+      const hoverRestoreTimerRef = useRef(null)
+      const hoverScrollTopRef = useRef(null)
+
+      /** 画布挂载/卸载时接管尺寸观察；模型加载后画布才出现，不能用一次性的 effect。 */
+      const setCanvasNode = useCallback((element) => {
+        canvasRef.current = element
+        if (canvasObserverRef.current) {
+          canvasObserverRef.current.disconnect()
+          canvasObserverRef.current = null
+        }
+        if (!element) return
+        const apply = (width, height) => {
+          if (!(width > 0) || !(height > 0)) return
+          setCanvasSize((previous) => (
+            Math.abs(previous.w - width) < 1 && Math.abs(previous.h - height) < 1
+              ? previous
+              : { w: Math.max(120, width), h: Math.max(120, height) }
+          ))
+        }
+        const rect = element.getBoundingClientRect()
+        apply(rect.width, rect.height)
+        if (typeof ResizeObserver === 'undefined') return
+        const observer = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const { width, height } = entry.contentRect
+            apply(width, height)
+          }
+        })
+        observer.observe(element)
+        canvasObserverRef.current = observer
+      }, [])
 
       // 轮询：2s（host 可配置），失败不清空已有数据
       const pollMs = Math.max(500, Number(model?.config?.pollMs) || FALLBACK_POLL_MS)
@@ -912,32 +1008,59 @@ window.__ModuleLoader__.load({
         return () => observer.disconnect()
       }, [])
 
-      // 画布尺寸
+      // 视图切换时回到 fit；尺寸变化时保持用户缩放，只夹紧平移
       useEffect(() => {
-        const element = canvasRef.current
-        if (!element || typeof ResizeObserver === 'undefined') return undefined
-        const observer = new ResizeObserver((entries) => {
-          for (const entry of entries) {
-            const { width, height } = entry.contentRect
-            setCanvasSize((previous) => (
-              Math.abs(previous.w - width) < 1 && Math.abs(previous.h - height) < 1
-                ? previous
-                : { w: Math.max(120, width), h: Math.max(120, height) }
-            ))
+        if (!activeView) return
+        const nextFit = computeFitScale(activeView, canvasSize)
+        const viewChanged = viewIdRef.current !== activeView.viewId
+        viewIdRef.current = activeView.viewId
+        setViewTransform((previous) => {
+          if (viewChanged || Math.abs(previous.zoom - 1) < 0.001) {
+            return { zoom: 1, ...centeredPan(activeView, canvasSize, nextFit) }
           }
+          const nextScale = Math.max(0.05, Math.min(4, nextFit * previous.zoom))
+          const nextPan = clampPan(activeView, canvasSize, nextScale, previous)
+          return { ...previous, x: nextPan.x, y: nextPan.y }
         })
-        observer.observe(element)
-        return () => observer.disconnect()
-      }, [])
+      }, [activeView?.viewId, activeView?.width, activeView?.height, canvasSize.w, canvasSize.h])
 
-      // 切换图时回到左上角
+      // 切视图/切面板时清掉拖拽与悬停
       useEffect(() => {
+        dragRef.current = null
+        setDragging(false)
+        setHovered(null)
+      }, [activeView?.viewId, panel])
+
+      // 滚轮缩放：原生监听（React 的 onWheel 不能可靠 preventDefault）
+      useEffect(() => {
+        if (panel !== 'graph') return undefined
         const element = canvasRef.current
-        if (element) {
-          element.scrollTop = 0
-          element.scrollLeft = 0
+        if (!element) return undefined
+        const onWheel = (event) => {
+          const view = activeViewRef.current
+          if (!view) return
+          event.preventDefault()
+          const rawDelta = event.deltaY || event.deltaX
+          if (!rawDelta) return
+          const delta = event.deltaMode === 1 ? rawDelta * 16 : (event.deltaMode === 2 ? rawDelta * 100 : rawDelta)
+          const factor = Math.exp(-delta * 0.0015)
+          const rect = element.getBoundingClientRect()
+          const anchorX = event.clientX - rect.left
+          const anchorY = event.clientY - rect.top
+          setViewTransform((previous) => {
+            const nextZoom = Math.max(0.25, Math.min(4, previous.zoom * factor))
+            const oldScale = Math.max(0.05, Math.min(4, fitScaleRef.current * previous.zoom))
+            const nextScale = Math.max(0.05, Math.min(4, fitScaleRef.current * nextZoom))
+            const ratio = nextScale / oldScale
+            const x = anchorX - (anchorX - previous.x) * ratio
+            const y = anchorY - (anchorY - previous.y) * ratio
+            const nextPan = clampPan(view, canvasSizeRef.current, nextScale, { x, y })
+            return { zoom: nextZoom, x: nextPan.x, y: nextPan.y }
+          })
         }
-      }, [viewId])
+        element.addEventListener('wheel', onWheel, { passive: false })
+        return () => element.removeEventListener('wheel', onWheel)
+      }, [panel, activeView?.viewId, views.length])
 
       const diff = model?.diff && model.diff.at ? model.diff : null
       const diffFresh = diff ? (Date.now() - Date.parse(diff.at)) < NEW_HIGHLIGHT_MS : false
@@ -965,6 +1088,250 @@ window.__ModuleLoader__.load({
       const tree = model?.tree && typeof model.tree === 'object' ? model.tree : null
       const activeTree = treeMode === 'category' ? tree?.category : tree?.hierarchy
 
+      // 树索引：elementId → 节点/祖先路径；viewId → 视图行
+      const treeIndex = useMemo(() => {
+        const byElement = new Map()
+        const byView = new Map()
+        const walk = (node, ancestors) => {
+          if (!node) return
+          const elementId = treeNodeElementId(node)
+          if (elementId) {
+            if (!byElement.has(elementId)) byElement.set(elementId, [])
+            byElement.get(elementId).push({ node, ancestors })
+          }
+          if (node.view) byView.set(node.view, { node, ancestors })
+          const children = Array.isArray(node.children) ? node.children : []
+          for (const child of children) walk(child, [...ancestors, node])
+        }
+        if (activeTree) walk(activeTree, [])
+        return { byElement, byView }
+      }, [activeTree])
+
+      const hoverHighlight = useMemo(() => {
+        const ids = new Set()
+        const hiddenAncestors = new Set()
+        if (!hovered) return { ids, hiddenAncestors }
+        if (treeMode === 'hierarchy' && hovered.elementId) {
+          for (const entry of treeIndex.byElement.get(hovered.elementId) || []) {
+            ids.add(entry.node.id)
+            for (const ancestor of entry.ancestors) {
+              if (collapsed.has(ancestor.id)) hiddenAncestors.add(ancestor.id)
+            }
+          }
+        } else if (treeMode === 'category' && hovered.viewId) {
+          const entry = treeIndex.byView.get(hovered.viewId)
+          if (entry) {
+            ids.add(entry.node.id)
+            for (const ancestor of entry.ancestors) {
+              if (collapsed.has(ancestor.id)) hiddenAncestors.add(ancestor.id)
+            }
+          }
+        }
+        return { ids, hiddenAncestors }
+      }, [hovered, treeMode, treeIndex, collapsed])
+
+      // 折叠分支里的目标：延迟展开祖先，并记下是哪些被临时展开
+      useEffect(() => {
+        if (!hovered || hoverHighlight.hiddenAncestors.size === 0) return undefined
+        const timer = setTimeout(() => {
+          if (hoverScrollTopRef.current === null && treeRef.current) {
+            hoverScrollTopRef.current = treeRef.current.scrollTop
+          }
+          setCollapsed((previous) => {
+            let changed = false
+            const next = new Set(previous)
+            for (const id of hoverHighlight.hiddenAncestors) {
+              if (next.delete(id)) {
+                autoExpandedRef.current.add(id)
+                changed = true
+              }
+            }
+            return changed ? next : previous
+          })
+        }, 150)
+        return () => clearTimeout(timer)
+      }, [hovered, hoverHighlight])
+
+      // 鼠标离开图后，把为了高亮而临时展开的分支收回；防抖避免节点间移动时闪烁
+      useEffect(() => {
+        if (hoverRestoreTimerRef.current) {
+          clearTimeout(hoverRestoreTimerRef.current)
+          hoverRestoreTimerRef.current = null
+        }
+        if (hovered) return undefined
+        if (autoExpandedRef.current.size === 0) return undefined
+        hoverRestoreTimerRef.current = setTimeout(() => {
+          hoverRestoreTimerRef.current = null
+          const ids = autoExpandedRef.current
+          autoExpandedRef.current = new Set()
+          const scrollTop = hoverScrollTopRef.current
+          hoverScrollTopRef.current = null
+          setCollapsed((previous) => {
+            let changed = false
+            const next = new Set(previous)
+            for (const id of ids) {
+              if (!next.has(id)) {
+                next.add(id)
+                changed = true
+              }
+            }
+            return changed ? next : previous
+          })
+          if (scrollTop !== null) {
+            const restoreScroll = () => {
+              if (treeRef.current) treeRef.current.scrollTop = scrollTop
+            }
+            if (typeof requestAnimationFrame === 'function') requestAnimationFrame(restoreScroll)
+            else setTimeout(restoreScroll, 0)
+          }
+        }, 180)
+        return () => {
+          if (hoverRestoreTimerRef.current) {
+            clearTimeout(hoverRestoreTimerRef.current)
+            hoverRestoreTimerRef.current = null
+          }
+        }
+      }, [hovered])
+
+      // 树行已在 DOM 里时滚到最近可见位置（展开后下一轮渲染会再触发）
+      useEffect(() => {
+        if (!hovered || !treeOpen || hoverHighlight.ids.size === 0) return
+        const root = treeRef.current
+        if (!root) return
+        const target = Array.from(root.querySelectorAll('[data-tree-id]'))
+          .find((element) => hoverHighlight.ids.has(element.getAttribute('data-tree-id')))
+        if (target) target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      }, [hovered, treeOpen, hoverHighlight, treeMode, collapsed])
+
+      const hoveredNodeId = hovered?.nodeId || null
+
+      const zoomAt = useCallback((factor, anchorX, anchorY) => {
+        const view = activeViewRef.current
+        if (!view) return
+        setViewTransform((previous) => {
+          const nextZoom = Math.max(0.25, Math.min(4, previous.zoom * factor))
+          const oldScale = Math.max(0.05, Math.min(4, fitScaleRef.current * previous.zoom))
+          const nextScale = Math.max(0.05, Math.min(4, fitScaleRef.current * nextZoom))
+          const ratio = nextScale / oldScale
+          const x = anchorX - (anchorX - previous.x) * ratio
+          const y = anchorY - (anchorY - previous.y) * ratio
+          const nextPan = clampPan(view, canvasSizeRef.current, nextScale, { x, y })
+          return { zoom: nextZoom, x: nextPan.x, y: nextPan.y }
+        })
+      }, [])
+
+      const fitCanvas = useCallback(() => {
+        const view = activeViewRef.current
+        if (!view) return
+        const nextFit = computeFitScale(view, canvasSizeRef.current)
+        setViewTransform({ zoom: 1, ...centeredPan(view, canvasSizeRef.current, nextFit) })
+      }, [])
+
+      const handleNodeSelect = useCallback((node, event) => {
+        if (Date.now() < suppressClickUntilRef.current) {
+          if (event && typeof event.stopPropagation === 'function') event.stopPropagation()
+          return
+        }
+        setSelectedNodeId(node.id)
+      }, [])
+
+      const handleBackgroundClick = useCallback((event) => {
+        if (Date.now() < suppressClickUntilRef.current) {
+          if (event && typeof event.stopPropagation === 'function') event.stopPropagation()
+          return
+        }
+        setSelectedNodeId(null)
+      }, [])
+
+      const handleNodeHover = useCallback((node, leaving) => {
+        if (dragRef.current?.moved) return
+        if (!node) {
+          setHovered((previous) => {
+            if (!previous) return previous
+            if (leaving && previous.nodeId !== leaving.id) return previous
+            return null
+          })
+          return
+        }
+        setHovered({
+          nodeId: node.id,
+          elementId: node.elementId || null,
+          viewId: activeViewRef.current?.viewId || null,
+        })
+      }, [])
+
+      const handlePointerDown = useCallback((event) => {
+        if (event.button !== 0 && event.button !== 1) return
+        if (event.button === 1) event.preventDefault()
+        const transform = transformRef.current
+        dragRef.current = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          originX: transform.x,
+          originY: transform.y,
+          moved: false,
+        }
+        suppressClickUntilRef.current = 0
+        setHovered(null)
+      }, [])
+
+      const handlePointerMove = useCallback((event) => {
+        const drag = dragRef.current
+        if (!drag || drag.pointerId !== event.pointerId) return
+        const dx = event.clientX - drag.startX
+        const dy = event.clientY - drag.startY
+        if (!drag.moved && Math.hypot(dx, dy) < 4) return
+        if (!drag.moved) {
+          drag.moved = true
+          // 超过阈值才算拖拽；此时才捕获指针，避免普通点击被重定向到画布容器。
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId)
+          } catch {
+            /* 不支持 pointer capture 时退回普通拖拽 */
+          }
+        }
+        event.preventDefault()
+        setDragging(true)
+        const view = activeViewRef.current
+        if (!view) return
+        const nextScale = Math.max(0.05, Math.min(4, fitScaleRef.current * transformRef.current.zoom))
+        const nextPan = clampPan(view, canvasSizeRef.current, nextScale, {
+          x: drag.originX + dx,
+          y: drag.originY + dy,
+        })
+        setViewTransform((previous) => ({ ...previous, x: nextPan.x, y: nextPan.y }))
+      }, [])
+
+      const finishDrag = useCallback((event, cancelled) => {
+        const drag = dragRef.current
+        if (!drag || drag.pointerId !== event.pointerId) return
+        if (drag.moved && !cancelled) {
+          suppressClickUntilRef.current = Date.now() + 350
+        }
+        dragRef.current = null
+        setDragging(false)
+        try {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        } catch {
+          /* 已释放 */
+        }
+      }, [])
+
+      const handleLostPointerCapture = useCallback((event) => {
+        const drag = dragRef.current
+        if (!drag || drag.pointerId !== event.pointerId) return
+        dragRef.current = null
+        setDragging(false)
+      }, [])
+
+      // 模型更新后悬停节点已消失时清理
+      useEffect(() => {
+        if (!hovered) return
+        const exists = (activeView?.nodes || []).some((node) => node.id === hovered.nodeId)
+        if (!exists) setHovered(null)
+      }, [activeView, hovered])
+
       const toggleTreeNode = useCallback((node) => {
         if (!node) return
         if (node.view) {
@@ -972,7 +1339,9 @@ window.__ModuleLoader__.load({
           setSelectedNodeId(null)
           return
         }
-        if (node.elementId) {
+        const hasChildren = Array.isArray(node.children) && node.children.length > 0
+        // 有子节点的定义节点仍然点击展开/折叠；无子节点的元素叶子才跳到图上
+        if (!hasChildren && node.elementId) {
           const target = views.find((view) => (view.nodes || []).some((item) => item.elementId === node.elementId))
           if (target) {
             setViewId(target.viewId)
@@ -982,7 +1351,8 @@ window.__ModuleLoader__.load({
             return
           }
         }
-        if (Array.isArray(node.children) && node.children.length > 0) {
+        if (hasChildren) {
+          autoExpandedRef.current.delete(node.id)
           setCollapsed((previous) => {
             const next = new Set(previous)
             if (next.has(node.id)) next.delete(node.id)
@@ -1069,10 +1439,12 @@ window.__ModuleLoader__.load({
         const isCollapsed = collapsed.has(node.id)
         const isViewLeaf = Boolean(node.view)
         const isSelected = isViewLeaf && node.view === activeView?.viewId
+        const isHovered = hoverHighlight.ids.has(node.id)
         const index = `${node.id || 'node'}@${depth}`
         const row = h('div', {
           key: `${index}:row`,
-          className: `svz-tnode${isViewLeaf ? ' view' : ''}${isSelected ? ' sel' : ''}`,
+          className: `svz-tnode${isViewLeaf ? ' view' : ''}${isSelected ? ' sel' : ''}${isHovered ? ' hov' : ''}`,
+          'data-tree-id': node.id,
           style: { paddingLeft: `${5 + depth * 11}px` },
           title: node.label,
           onClick: (event) => {
@@ -1196,16 +1568,37 @@ window.__ModuleLoader__.load({
         ])
       }
 
-      const padding = 22
-      const fitScale = activeView
-        ? Math.min(
-          (canvasSize.w - padding * 2) / Math.max(1, activeView.width),
-          (canvasSize.h - padding * 2) / Math.max(1, activeView.height),
-        )
-        : 1
+      const fitScale = activeView ? computeFitScale(activeView, canvasSize) : 1
       const scale = activeView
-        ? Math.max(0.5, Math.min(1, fitScale)) * zoom
+        ? Math.max(0.05, Math.min(4, fitScale * viewTransform.zoom))
         : 1
+      activeViewRef.current = activeView
+      canvasSizeRef.current = canvasSize
+      fitScaleRef.current = fitScale
+      transformRef.current = viewTransform
+
+      const canvasSvg = useMemo(() => {
+        if (!activeView) return null
+        return renderSvg(
+          activeView,
+          selectedNodeId,
+          addedElementIds,
+          sessionAddedIds,
+          hoveredNodeId,
+          handleNodeSelect,
+          handleNodeHover,
+          handleBackgroundClick,
+        )
+      }, [
+        activeView,
+        selectedNodeId,
+        addedElementIds,
+        sessionAddedIds,
+        hoveredNodeId,
+        handleNodeSelect,
+        handleNodeHover,
+        handleBackgroundClick,
+      ])
 
       const modelPath = model?.modelRef?.path || ''
       const baselineName = modelPath.split(/[\\/]/).pop() || ''
@@ -1324,13 +1717,12 @@ window.__ModuleLoader__.load({
           h('div', { key: 'hint' }, t('empty.hint')),
         ])
       } else {
-        const svgWidth = Math.round(activeView.width * scale)
-        const svgHeight = Math.round(activeView.height * scale)
         body = h('div', { className: 'svz-main', style: { flexDirection: narrow ? 'column' : 'row' } }, [
           treeOpen
             ? h('div', {
               key: 'tree',
               className: 'svz-tree',
+              ref: treeRef,
               style: narrow ? { width: '100%', maxWidth: '100%', maxHeight: '210px', borderRight: 'none', borderBottom: '1px solid var(--svz-border)' } : undefined,
             }, [
               h('div', { key: 'head', className: 'svz-treehead' }, [
@@ -1350,49 +1742,51 @@ window.__ModuleLoader__.load({
             : null,
           h('div', { key: 'canvas-col', className: 'svz-canvas-col' }, [
             h('div', { key: 'viewbar', className: 'svz-viewbar' }, [
-              ...views.map((view) => h('button', {
-                key: `chip-${view.viewId}`,
-                className: `svz-viewchip${panel === 'graph' && view.viewId === activeView.viewId ? ' on' : ''}`,
-                title: view.title,
-                onClick: () => {
-                  setPanel('graph')
-                  setViewId(view.viewId)
-                },
-              }, [
-                h('span', { key: 'dot', className: 'svz-kdot', style: { background: VIEW_KIND_COLOR[view.kind] || '#8fb6ff' } }),
-                h('span', { key: 'text' }, view.title),
-              ])),
-              h('button', {
-                key: 'chip-process',
-                className: `svz-viewchip process${panel === 'process' ? ' on' : ''}`,
-                title: t('process.hint'),
-                onClick: () => setPanel(panel === 'process' ? 'graph' : 'process'),
-              }, [
-                h('span', { key: 'dot', className: 'svz-kdot' }),
-                h('span', { key: 'text' }, t('process.tab')),
-                history?.stepCount
-                  ? h('span', { key: 'count', className: 'svz-chipcount' }, String(history.stepCount))
-                  : null,
+              h('div', { key: 'chips', className: 'svz-viewchips' }, [
+                ...views.map((view) => h('button', {
+                  key: `chip-${view.viewId}`,
+                  className: `svz-viewchip${panel === 'graph' && view.viewId === activeView.viewId ? ' on' : ''}`,
+                  title: view.title,
+                  onClick: () => {
+                    setPanel('graph')
+                    setViewId(view.viewId)
+                  },
+                }, [
+                  h('span', { key: 'dot', className: 'svz-kdot', style: { background: VIEW_KIND_COLOR[view.kind] || '#8fb6ff' } }),
+                  h('span', { key: 'text' }, view.title),
+                ])),
+                h('button', {
+                  key: 'chip-process',
+                  className: `svz-viewchip process${panel === 'process' ? ' on' : ''}`,
+                  title: t('process.hint'),
+                  onClick: () => setPanel(panel === 'process' ? 'graph' : 'process'),
+                }, [
+                  h('span', { key: 'dot', className: 'svz-kdot' }),
+                  h('span', { key: 'text' }, t('process.tab')),
+                  history?.stepCount
+                    ? h('span', { key: 'count', className: 'svz-chipcount' }, String(history.stepCount))
+                    : null,
+                ]),
               ]),
               panel === 'process' ? null : h('div', { key: 'zoom', className: 'svz-zoombar' }, [
                 h('button', {
                   key: 'out',
                   className: 'svz-btn',
                   title: t('zoom.out'),
-                  onClick: () => setZoom((value) => Math.max(0.5, Math.round((value - 0.15) * 100) / 100)),
+                  onClick: () => zoomAt(1 / 1.15, canvasSize.w / 2, canvasSize.h / 2),
                 }, '−'),
                 h('span', { key: 'value', className: 'svz-zoomval' }, `${Math.round(scale * 100)}%`),
                 h('button', {
                   key: 'in',
                   className: 'svz-btn',
                   title: t('zoom.in'),
-                  onClick: () => setZoom((value) => Math.min(3, Math.round((value + 0.15) * 100) / 100)),
+                  onClick: () => zoomAt(1.15, canvasSize.w / 2, canvasSize.h / 2),
                 }, '+'),
                 h('button', {
                   key: 'fit',
                   className: 'svz-btn',
                   title: t('zoom.fit'),
-                  onClick: () => setZoom(1),
+                  onClick: fitCanvas,
                 }, t('zoom.fit')),
               ]),
             ]),
@@ -1400,13 +1794,27 @@ window.__ModuleLoader__.load({
               ? renderProcessPanel()
               : h('div', {
                 key: 'wrap',
-                className: 'svz-canvas-wrap',
-                ref: canvasRef,
-                onClick: () => setSelectedNodeId(null),
+                className: `svz-canvas-wrap${dragging ? ' dragging' : ''}`,
+                ref: setCanvasNode,
+                onPointerDown: handlePointerDown,
+                onPointerMove: handlePointerMove,
+                onPointerUp: (event) => finishDrag(event, false),
+                onPointerCancel: (event) => finishDrag(event, true),
+                onLostPointerCapture: handleLostPointerCapture,
+                onMouseLeave: () => handleNodeHover(null),
+                onClick: (event) => {
+                  if (event.target === event.currentTarget) handleBackgroundClick(event)
+                },
               }, [
-                renderSvg(activeView, svgWidth, svgHeight, selectedNodeId, addedElementIds, sessionAddedIds, (node) => {
-                  setSelectedNodeId(node.id)
-                }, () => setSelectedNodeId(null)),
+                h('div', {
+                  key: 'stage',
+                  className: 'svz-canvas-stage',
+                  style: {
+                    width: activeView.width,
+                    height: activeView.height,
+                    transform: `translate(${viewTransform.x.toFixed(2)}px, ${viewTransform.y.toFixed(2)}px) scale(${scale.toFixed(4)})`,
+                  },
+                }, canvasSvg),
               ]),
             panel === 'process' ? null : h('div', { key: 'status', className: 'svz-statusbar' }, [
               h('span', { key: 'view', className: 'svz-view' }, `${activeView.title} · ${t('view.nodes', {
@@ -1550,7 +1958,7 @@ window.__ModuleLoader__.load({
           if (cancelled || dismissed()) return
           attempts += 1
           if (attempts > 20) return
-          if (openModelView() === true) {
+          if (openModelView(sessionId) === true) {
             autoOpenSessions.add(sessionId)
             return
           }
@@ -1565,8 +1973,17 @@ window.__ModuleLoader__.load({
 
       const open = (event) => {
         if (event && typeof event.stopPropagation === 'function') event.stopPropagation()
-        if (typeof openModelView === 'function') openModelView()
+        // 手动打开视为“重新接受自动打开”，清掉该会话的关闭记忆
+        try {
+          localStorage.removeItem(dismissedKeyFor(sessionId))
+        } catch {
+          /* 隐私模式等场景忽略 */
+        }
+        if (typeof openModelView === 'function') openModelView(sessionId)
       }
+
+      // 入口只在 SysML 会话显示；其他预设仍可从右栏默认页的「模型视图」卡片进入。
+      if (preset !== 'sysml-v2') return null
 
       return h(React.Fragment, null, [
         h('style', { key: 'css' }, HEADER_CSS),
@@ -1591,11 +2008,13 @@ window.__ModuleLoader__.load({
       /**
        * 打开（或聚焦）当前会话的「模型视图」tab。
        *
-       * 注意：openTab 不带 replaceTab（否则会顶掉文件预览/guide）；当右栏当前没有任何 tab 时
-       * 先打开 files（退化到 guide）以播种默认页，避免用户觉得「文件预览没了」。
+       * 注意：openTab 不带 replaceTab（否则会顶掉文件预览/guide）；不主动播种 files tab，
+       * 右栏为空时只打开模型视图。openTab 作用于「屏幕上已挂载」的会话，因此调用方必须
+       * 传入 sessionId，避免后台 SysML 会话把 tab 开到当前的非 SysML 会话里。
+       * @param {string} sessionId - 发起打开的会话 id。
        * @returns {boolean} 是否已打开成功；会话尚未挂载/store 未铸造时返回 false 供调用方重试。
        */
-      function openModelView() {
+      function openModelView(sessionId) {
         try {
           let mounted
           try {
@@ -1603,21 +2022,12 @@ window.__ModuleLoader__.load({
           } catch {
             mounted = undefined
           }
+          if (mounted && sessionId && mounted !== sessionId) return false
           const tabs = (ctx.sidebarRight.openTabs.getSnapshot() ?? [])
             .filter((tab) => mounted === undefined || tab.sessionId === mounted)
           if (tabs.some((tab) => tab.kind === TAB_KIND)) {
             ctx.sidebarRight.openTab(TAB_KIND)
             return true
-          }
-          if (tabs.length === 0) {
-            for (const kind of ['files', 'guide']) {
-              try {
-                ctx.sidebarRight.openTab(kind)
-                break
-              } catch {
-                /* 该类型未注册时换下一个 */
-              }
-            }
           }
           ctx.sidebarRight.openTab(TAB_KIND)
           return true

@@ -216,6 +216,16 @@ await checkAsync('GET /api/sysml-viz/model（JS 兜底）→ ok=true、≥4 view
   assert(/^[0-9a-f]{8}$/.test(model.modelRef?.revision ?? ''), `revision=${model.modelRef?.revision}`)
   assert(/^[0-9a-f]{64}$/.test(model.modelRef?.irSha256 ?? ''), 'irSha256 不是 64 位 hex')
   assert(model.tree?.hierarchy && model.tree?.category, '缺少 tree.hierarchy/category')
+  const findDefinitionNode = (node) => {
+    if (!node) return null
+    if (String(node.id || '').startsWith('def:') && node.elementId) return node
+    for (const child of node.children || []) {
+      const found = findDefinitionNode(child)
+      if (found) return found
+    }
+    return null
+  }
+  assert(findDefinitionNode(model.tree.hierarchy), 'PartDefinition 树节点缺少 elementId（悬停联动需要）')
   assert(typeof model.modeling?.active === 'boolean', '缺少 modeling.active')
   assert(model.config?.autoOpen === false, 'autoOpen 配置没有透传')
   jsModel = model
@@ -643,14 +653,19 @@ await checkAsync('client.js factory → {inject, apply}，注册 tab 类型 / �
     record.closeHandler('session-1')
     assert(storage.get('dsh.sysml-viz.dismissed.session-1') === '1', '关闭标记没有按会话写入 localStorage')
 
-    // 空右栏：先播种 files，再打开 sysml-viz（不顶掉默认页）
-    assert(injected.openModelView() === true, 'openModelView 返回 false')
-    assert(record.openTabCalls.join(',') === 'files,sysml-viz', `openTab 顺序=${record.openTabCalls.join(',')}`)
+    // 空右栏：只打开 sysml-viz，不再播种 files
+    assert(injected.openModelView('session-1') === true, 'openModelView 返回 false')
+    assert(record.openTabCalls.join(',') === 'sysml-viz', `openTab 顺序=${record.openTabCalls.join(',')}`)
 
-    // 已打开：再次点击只聚焦，不重复播种
+    // 已打开：再次点击只聚焦
     record.openTabCalls.length = 0
-    assert(injected.openModelView() === true, '第二次 openModelView 返回 false')
+    assert(injected.openModelView('session-1') === true, '第二次 openModelView 返回 false')
     assert(record.openTabCalls.join(',') === 'sysml-viz', `已打开时 openTab=${record.openTabCalls.join(',')}`)
+
+    // 后台会话不得把 tab 开到当前挂载的会话
+    record.openTabCalls.length = 0
+    assert(injected.openModelView('other-session') === false, '后台会话 openModelView 应返回 false')
+    assert(record.openTabCalls.length === 0, `后台会话不应 openTab，实际 ${record.openTabCalls.join(',')}`)
     assert(record.ownerKeys.includes('conversation.session.header.actions'), 'header slot inject 未被调用')
   } finally {
     for (const dispose of disposers.splice(0).reverse()) {
@@ -662,7 +677,7 @@ await checkAsync('client.js factory → {inject, apply}，注册 tab 类型 / �
     }
     delete globalThis.localStorage
   }
-  return 'tab 类型 / 正文 slot / header 按钮 / 按会话关闭标记 / 空栏播种 已装配'
+  return 'tab 类型 / 正文 slot / header 按钮 / 按会话关闭标记 / 不播种 files 已装配'
 })
 
 /* ------------------------------------------------------------------ *
@@ -671,6 +686,31 @@ await checkAsync('client.js factory → {inject, apply}，注册 tab 类型 / �
 
 const clientSource = readFileSync(join(here, 'client.js'), 'utf8')
 const hostSource = readFileSync(join(here, 'index.js'), 'utf8')
+
+check('画布 fit / 近自由平移边界：430px 视口 fit≈32%，左右对称且至少留 15% 可见', () => {
+  const start = clientSource.indexOf('const CANVAS_PADDING')
+  const end = clientSource.indexOf('function edgeGeometry')
+  assert(start > 0 && end > start, '找不到画布数学函数段')
+  const math = new Function(`${clientSource.slice(start, end)}
+    return { computeFitScale, centeredPan, clampPan }`)()
+  const view = { width: 1214, height: 876 }
+  const size = { w: 430, h: 550 }
+  const fit = math.computeFitScale(view, size)
+  assert(Math.round(fit * 100) === 32, `430px 视口 fit=${Math.round(fit * 100)}%，预期 32%`)
+  const scale = 0.61
+  const center = math.centeredPan(view, size, scale)
+  const lo = math.clampPan(view, size, scale, { x: -1e9, y: -1e9 })
+  const hi = math.clampPan(view, size, scale, { x: 1e9, y: 1e9 })
+  assert(Math.abs((lo.x + hi.x) / 2 - center.x) < 0.01, `x 边界不对称：${lo.x} / ${hi.x}`)
+  assert(Math.abs((lo.y + hi.y) / 2 - center.y) < 0.01, `y 边界不对称：${lo.y} / ${hi.y}`)
+  const keep = Math.max(32, Math.min(120, Math.round(Math.min(size.w, size.h) * 0.15)))
+  assert(Math.abs(hi.x - (size.w - keep)) < 0.01, `右端可见=${size.w - hi.x}px`)
+  assert(Math.abs((lo.x + view.width * scale) - keep) < 0.01, `左端可见=${lo.x + view.width * scale}px`)
+  const smallLo = math.clampPan({ width: 300, height: 200 }, size, 0.2, { x: -1e9, y: 0 })
+  const smallHi = math.clampPan({ width: 300, height: 200 }, size, 0.2, { x: 1e9, y: 0 })
+  assert(smallHi.x - smallLo.x > 200, `小图可移动范围只有 ${smallHi.x - smallLo.x}px`)
+  return `fit=32%, x=[${lo.x.toFixed(0)}, ${hi.x.toFixed(0)}], keep=${keep}`
+})
 
 check('client.js 不引用 http(s) 外链', () => {
   const matches = clientSource.match(/https?:\/\//g) ?? []
@@ -695,14 +735,58 @@ check('client.js 注册可关闭的新 tab 类型（不接管 files/text）', ()
   return 'kind=sysml-viz, closeable'
 })
 
-check('client.js 含 preset 自动打开 / header 手动入口 / 空栏播种逻辑', () => {
+check('client.js 含 preset 自动打开 / header 仅 SysML 显示 / 不播种 files', () => {
   assert(clientSource.includes('conversation.session.header.actions'), '缺少会话 header 按钮 slot')
   assert(clientSource.includes('projectionValues?.agentPreset'), '缺少读当前会话 preset')
-  assert(clientSource.includes("preset !== 'sysml-v2'"), '自动打开未按 sysml-v2 preset 判断')
+  assert(clientSource.includes("preset !== 'sysml-v2'"), '自动打开/按钮未按 sysml-v2 preset 判断')
+  assert(clientSource.includes("if (preset !== 'sysml-v2') return null"), '非 SysML 会话未隐藏 header 按钮')
   assert(clientSource.includes('dsh.sysml-viz.dismissed.'), '缺少按会话的关闭记忆 key')
   assert(clientSource.includes('innerWidth') && clientSource.includes('768'), '缺少窄窗不自动打开判断')
-  assert(clientSource.includes("kind of ['files', 'guide']"), '缺少空右栏先播种 files 的逻辑')
-  return 'preset 自动打开 / header 按钮 / 播种 / 窄窗'
+  assert(!clientSource.includes("kind of ['files', 'guide']"), '不应再在空右栏播种 files/guide')
+  assert(clientSource.includes('mounted !== sessionId'), '缺少后台会话 mounted 守卫')
+  return 'preset 自动打开 / header 仅 SysML / 不播种 files / mounted 守卫'
+})
+
+check('client.js 画布缩放/平移 + 尺寸测量 + 悬停联动装配', () => {
+  for (const marker of [
+    'svz-canvas-stage',
+    'computeFitScale',
+    'clampPan',
+    'handlePointerDown',
+    'handlePointerMove',
+    'onWheel',
+    'zoomAt',
+    'fitCanvas',
+    'svz-hov',
+    'hoverHighlight',
+    'data-tree-id',
+    'scrollIntoView',
+    'canvasObserverRef',
+    'setCanvasNode',
+    'getBoundingClientRect',
+  ]) {
+    assert(clientSource.includes(marker), `缺少 ${marker}`)
+  }
+  assert(clientSource.includes('ref: setCanvasNode'), '画布未挂 ref callback（尺寸测量会再次失效）')
+  assert(!clientSource.includes("const element = canvasRef.current\n        if (!element || typeof ResizeObserver === 'undefined')"), '仍残留一次性 ResizeObserver effect')
+  assert(clientSource.includes("addEventListener('wheel'") && clientSource.includes('passive: false'), '滚轮缩放未用非被动原生监听')
+  assert(!clientSource.includes('setZoom('), '仍残留旧的 setZoom 状态')
+  return 'canvas pan/zoom + measured size + hover linking wired'
+})
+
+check('client.js 悬停展开后恢复折叠（防抖 + 滚动位置 + 手动优先）', () => {
+  for (const marker of [
+    'autoExpandedRef',
+    'hoverRestoreTimerRef',
+    'hoverScrollTopRef',
+    'autoExpandedRef.current.add(id)',
+    'autoExpandedRef.current.delete(node.id)',
+    'requestAnimationFrame(restoreScroll)',
+  ]) {
+    assert(clientSource.includes(marker), `缺少 ${marker}`)
+  }
+  assert(/setCollapsed\(\(previous\) => \{[\s\S]{0,400}next\.add\(id\)/.test(clientSource), '恢复逻辑没有把自动展开的节点加回 collapsed')
+  return 'hover auto-expand restores collapsed + scroll'
 })
 
 check('client.js 含「过程」面板装配（history/timeline + 本会话标记）', () => {
