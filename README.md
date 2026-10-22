@@ -21,11 +21,12 @@
 | MCP 服务（stdio / streamable-http + Bearer 鉴权） | ✅ 完成，契约见 §3 |
 | **五份 skill**（workflow / element-choice / anti-patterns / worked-examples / domain-patterns） | ✅ 完成：anti-patterns **16 条**、element-choice **9 个边界案例**、worked-examples **5 个范例**、domain-patterns **5 个模式** |
 | 标杆案例（**需求 + 结构 + 参数 + 行为**） | ✅ 完成：**34 元素 / 20 关系**，行为（`StateDefinition` 飞行模式状态机）已于二期补齐 |
-| 测试 | ✅ **606 个用例全绿**（含 40 余个应被拒绝的反例、25 个 timeline 用例） |
+| 测试 | ✅ **632 个用例全绿**（含 40 余个应被拒绝的反例、25 个 timeline 用例、26 个记忆库用例） |
 | 官方 SysML v2 解析器 | ✅ **语法与引用解析经官方 Pilot Implementation（release 2026-08）实测 0 error**（证据：`docs/probe-official-parser/EVIDENCE.txt` §13/§14）；**语义/建模质量未验证**。日常回验仍由内置 lint + 元素级比对承担 |
 | MCP 协议链路（Streamable HTTP + Bearer 鉴权） | ✅ **已实测通过**：真实 MCP 客户端完成 `initialize` → `tools/list` → `tools/call`，鉴权 401 行为正确。原始输出见 [EVIDENCE.txt](docs/probe-mcp-http/EVIDENCE.txt)（那次实测记录的是当时注册的 4 个工具，现已扩到 9 个） |
 | DSH 把本服务挂进 profile 并调用一次 | ✅ **已实测**（2026-10-17）：经 `cordis.patch.yml` 补丁层挂载成功，`mcp__sysml-agent__query_model` 真实调用返回正确结果。**手工写 `cordis.yml` 会被应用回写冲掉，必须走 `cordis.patch.yml`** |
 | DSH 右栏「模型视图」插件（[`integrations/dsh-sysml-viz/`](integrations/dsh-sysml-viz/README.md)，v0.1.4） | ✅ 本机实测：右栏 tab（模型树 + 结构/IBD/需求/状态/参数图 + 建模中状态 + 建模过程面板 + 全过程图）。只读展示层，代码在本仓库 `integrations/`，自带 `smoke-test.mjs`（33 项）；**不参与 Python 测试套件** |
+| **项目记忆库**（[`memory/`](memory/README.md)，GitHub + PR） | ✅ 链路已搭：13 条真实记忆 + 纯标准库工具（validate/check/search/inject/show/eval/propose/drain）+ 三套检索评测 + CI（`memory-validate` 必需、`check` 非必需、周度陈腐 issue）。注入按"数据不是指令"处理；T1 周度批量 review |
 | 往返一致性（IR → 文本 → IR） | ✅ 元素级等价 + 生成字节级稳定（`parse_sysml` + `tests/test_roundtrip_v2.py`） |
 | 二期 T7–T11 | ✅ 代码与测试全部落地（**T7 的「导入老师样本模型」验收待补**，见 §10）；T12 安装规范化见 §10 与 [`docs/T12-安装验收.md`](docs/T12-安装验收.md) |
 | 需求变更 → 追溯影响面演示（方案 9.2 判据） | ✅ 真实执行记录：[`docs/demo/run-phase2-change/`](docs/demo/run-phase2-change/RUN.md) |
@@ -79,7 +80,7 @@ sysml-modeling-agent/
 │       ├── golden-coaxial-power-chain.ir.json #   34 元素 / 20 关系（需求+结构+参数+行为）
 │       ├── golden-coaxial-power-chain.sysml   #   生成产物，不得手改
 │       └── README.md                          #   一页说明
-├── tests/                                    # T5 + 二期 —— 606 个用例
+├── tests/                                    # T5 + 二期 + 记忆库 —— 632 个用例
 │   ├── _support.py
 │   ├── test_validate.py  test_generate.py  test_query.py
 │   ├── test_lint_roundtrip.py  test_server.py
@@ -105,6 +106,14 @@ sysml-modeling-agent/
 │   ├── probe-mcp-http/                        #      MCP 协议链路探针与原始输出
 │   ├── probe-official-parser/                 #      官方解析器离线包 + EVIDENCE.txt
 │   └── demo/                                  #      T6 存档 + 二期需求变更演示（run-phase2-change/）
+├── memory/                                   # 项目记忆库（Markdown 记录 + 纯标准库工具）
+│   ├── README.md                             #   写入/检索协议（agent 必读）
+│   ├── core/red-lines.md                     #   常驻红线（≤1.2k 字符，每会话注入）
+│   ├── records/YYYY/MM/mem-*.md              #   一条一文件，append-only，supersedes 取代链
+│   ├── eval/{queries,heldout,test}.json      #   dev / held-out / 未调参三套检索评测
+│   └── tools/memory.py                       #   validate/check/search/inject/show/eval/propose/drain
+├── AGENTS.md                                 # 给 agent 的项目守则（DSH 自动注入）
+├── .github/workflows/                        # CI：tests（全量用例）+ memory（记忆校验/周度复核）
 ├── integrations/                             # DSH 侧集成（JS，不参与 Python 测试）
 │   ├── README.md                             #   为什么在这里、两种摆放方式、诚实边界
 │   └── dsh-sysml-viz/                        #   右栏「模型视图」插件 bundle v0.1.4（含 smoke-test.mjs）
@@ -128,6 +137,10 @@ python3 mcp-server/run_server.py --call validate_model_json \
 
 # ③ 跑全量测试
 ./tests/run_tests.sh            # Windows: tests\run_tests.bat
+
+# ④ 记忆库（开工前检索 / 提交前校验）
+python3 memory/tools/memory.py --root . inject "这次要改什么" --scope mcp-server/run_server.py --budget 900
+python3 memory/tools/memory.py --root . validate
 ```
 
 ### 依赖策略（重要）
@@ -226,12 +239,12 @@ python run_server.py --call export_simulink --input '{"model": {...}, "fmt": "cs
 ## 5. 跑测试
 
 ```bash
-./tests/run_tests.sh          # 606 个用例，详细输出；追加 -q 安静模式
+./tests/run_tests.sh          # 632 个用例，详细输出；追加 -q 安静模式
 PYTHON=python3.12 ./tests/run_tests.sh
 cd tests && python3 -m unittest discover -s . -t .    # 手工跑也可以
 ```
 
-只用标准库 `unittest`，**不依赖 pytest**。当前 **606 个用例**，覆盖：
+只用标准库 `unittest`，**不依赖 pytest**。当前 **632 个用例**，覆盖：
 
 - 各类**应被拒绝**的反例（缺 `acceptanceCriteria`、`relations.target` 悬空、同 owner 重名、
   `kind` 枚举自创、数值字段写成字符串、`typeRef` 悬空……）
@@ -339,6 +352,8 @@ python run_server.py --transport streamable-http --port 8000 --auth-token <token
 | 导出的仿真参数表长什么样 | [`docs/模拟侧参数表样例.md`](docs/模拟侧参数表样例.md) |
 | 安装脚本验收记录（真实命令输出） | [`docs/T12-安装验收.md`](docs/T12-安装验收.md) |
 | 知识库怎么规划 | [`knowledge/README.md`](knowledge/README.md) |
+| 项目记忆库怎么检索/写入/防腐化 | [`memory/README.md`](memory/README.md) |
+| 给 agent 的项目守则（会被 DSH 自动注入） | [`AGENTS.md`](AGENTS.md) |
 | DSH 右栏模型视图插件怎么装、怎么自检、边界在哪 | [`integrations/README.md`](integrations/README.md) |
 
 ---

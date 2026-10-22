@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sysml-memory-record-v0.json",
+  "title": "sysml-memory record (v0)",
+  "description": "记忆记录 frontmatter 约定（v0.2）。实现侧校验在 tools/memory.py（纯标准库），本文件给人/其他工具看。",
+  "type": "object",
+  "required": [
+    "id",
+    "kind",
+    "status",
+    "title",
+    "created",
+    "author",
+    "scope",
+    "tags",
+    "confidence",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^mem-[0-9]{8}-[0-9]{4}$"
+    },
+    "kind": {
+      "enum": [
+        "decision",
+        "gotcha",
+        "convention",
+        "glossary",
+        "session-digest",
+        "provenance"
+      ]
+    },
+    "status": {
+      "enum": [
+        "active",
+        "superseded",
+        "deprecated"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 120
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "author": {
+      "type": "string",
+      "minLength": 3
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{2,40}$"
+    },
+    "scope": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "review_after": {
+      "type": "string",
+      "format": "date"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^(file|commit|session|pr|url|external):.+$"
+      }
+    },
+    "check": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(path_exists:.+|contains:.+::.+)$"
+      }
+    },
+    "supersedes": {
+      "type": "array",
+      "items": {
+        "pattern": "^mem-[0-9]{8}-[0-9]{4}$"
+      }
+    },
+    "superseded_by": {
+      "pattern": "^mem-[0-9]{8}-[0-9]{4}$"
+    },
+    "aliases": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 24
+      }
+    },
+    "verified_by": {
+      "type": "string",
+      "description": "<人>@<commit>，人工核验后才填；inject 用它标‘已核验’"
+    }
+  }
+}

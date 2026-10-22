@@ -1,0 +1,133 @@
+[
+  {
+    "query": "插件改完为什么不生效",
+    "expect": [
+      "mem-20261019-0003"
+    ]
+  },
+  {
+    "query": "改完插件要重启吗",
+    "expect": [
+      "mem-20261019-0003"
+    ]
+  },
+  {
+    "query": "MSOSA 是什么工具",
+    "expect": [
+      "mem-20261020-0001"
+    ]
+  },
+  {
+    "query": "华望",
+    "expect": [
+      "mem-20261020-0001"
+    ]
+  },
+  {
+    "query": "能不能写 MSOSA 验证通过",
+    "expect": [
+      "mem-20261020-0002"
+    ]
+  },
+  {
+    "query": "未执行和 0 诊断的区别",
+    "expect": [
+      "mem-20261020-0002"
+    ]
+  },
+  {
+    "query": "工具数量改动要同步哪些文件",
+    "expect": [
+      "mem-20261020-0005"
+    ]
+  },
+  {
+    "query": "现在有几个 MCP 工具",
+    "expect": [
+      "mem-20261020-0005",
+      "mem-20261017-0011"
+    ]
+  },
+  {
+    "query": "过程面板为什么只有几步",
+    "expect": [
+      "mem-20261020-0006"
+    ]
+  },
+  {
+    "query": "sysml 文本能不能手改",
+    "expect": [
+      "mem-20261018-0007"
+    ]
+  },
+  {
+    "query": "L2 验证是什么意思",
+    "expect": [
+      "mem-20261020-0008"
+    ]
+  },
+  {
+    "query": "MCP 工具在会话里不见了",
+    "expect": [
+      "mem-20261017-0009"
+    ]
+  },
+  {
+    "query": "SVG 里能不能写 xmlns 网址",
+    "expect": [
+      "mem-20261019-0010"
+    ]
+  },
+  {
+    "query": "能不能装第三方库",
+    "expect": [
+      "mem-20261017-0004"
+    ]
+  },
+  {
+    "query": "这一轮做到哪了",
+    "expect": [
+      "mem-20261022-0012"
+    ]
+  },
+  {
+    "query": "qlmanage 转 png 失败",
+    "expect": [
+      "mem-20261022-0013"
+    ]
+  },
+  {
+    "query": "过程图怎么导出成图片",
+    "expect": [
+      "mem-20261022-0013"
+    ]
+  },
+  {
+    "query": "改完不生效",
+    "scope": [
+      "integrations/dsh-sysml-viz/client.js"
+    ],
+    "expect": [
+      "mem-20261019-0003"
+    ]
+  },
+  {
+    "query": "工具数量",
+    "scope": [
+      "mcp-server/tools/timeline.py"
+    ],
+    "expect": [
+      "mem-20261020-0005"
+    ]
+  },
+  {
+    "query": "如何配置 k8s 集群",
+    "expect": [],
+    "maxScore": 2.0
+  },
+  {
+    "query": "训练大模型需要多少显存",
+    "expect": [],
+    "maxScore": 2.0
+  }
+]

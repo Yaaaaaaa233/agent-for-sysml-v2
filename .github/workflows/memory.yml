@@ -1,0 +1,116 @@
+# 记忆库 CI（搬家到仓库根 .github/workflows/memory.yml 后生效）
+#
+# 设计取舍（都踩过坑）：
+# - 不用 `paths:` 过滤：被跳过的 required check 会永远停在 "Expected"，卡死无关 PR；
+#   memory.py 在 1000 条以内是秒级，每次 PR 都跑。
+# - `validate` 是必需检查（硬门禁）；`check`（断言/证据核验）单列且 `continue-on-error`，
+#   因为一次代码改名会让"记忆断言"红掉，但不该阻碍无关修复——失败由周度 rot job 开 issue。
+# - rot job 同时带 `check` 失败项和 `stats` 到期项。
+
+name: memory
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 1 * * 1" # 每周一 09:00 Asia/Shanghai
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: memory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: memory-validate # ← 分支保护里设为 required check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # check --git 需要完整历史
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 结构 / 引用 / 生命周期
+        run: python memory/tools/memory.py --root . validate
+      - name: 检索回归（held-out MRR）
+        run: python memory/tools/memory.py --root . eval --threshold 0.8
+
+  check:
+    name: memory-check（非必需）
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 防陈腐断言 + evidence 核验
+        run: python memory/tools/memory.py --root . check --git
+
+  rot-report:
+    name: 周度复核
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 收集状态
+        id: collect
+        run: |
+          set +e
+          python memory/tools/memory.py --root . check --git > /tmp/check.txt 2>&1
+          echo "check_exit=$?" >> "$GITHUB_OUTPUT"
+          python memory/tools/memory.py --root . stats > /tmp/stats.txt 2>&1
+          cat /tmp/check.txt /tmp/stats.txt
+          exit 0
+      - name: 有陈腐就开/更新 issue
+        if: steps.collect.outputs.check_exit != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const body = [
+              '周度记忆复核发现问题：断言失效、证据文件缺失/未入库，或记录到期。',
+              '请更新对应记录，或把它的 `status` 改成 `deprecated` / `superseded`。',
+              '',
+              '```',
+              fs.readFileSync('/tmp/check.txt', 'utf8').trim(),
+              '```',
+              '',
+              '### 到期 / 统计',
+              '```',
+              fs.readFileSync('/tmp/stats.txt', 'utf8').trim(),
+              '```',
+              '',
+              '<!-- memory-rot -->',
+            ].join('\n')
+            const title = 'memory: 周度复核（陈腐断言 / 到期记录）'
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'memory',
+            })
+            const existing = open.find((issue) => issue.title === title)
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              })
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['memory', 'rot'],
+              })
+            }

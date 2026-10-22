@@ -1,0 +1,10 @@
+# 记忆库：按路径分级（CODEOWNERS 只认路径，不认 frontmatter 里的 kind）
+# memory/core/**   → T2：只允许人写（红线/常驻记忆）
+# memory/records/** → T1：周度批量 review
+# memory/digests/** → T0：会话摘要，CI 绿可自动合并
+memory/core/**      @Yaaaaaaa233
+memory/records/**   @Yaaaaaaa233
+memory/digests/**   @Yaaaaaaa233
+memory/tools/**     @Yaaaaaaa233
+memory/schema/**    @Yaaaaaaa233
+memory/eval/**      @Yaaaaaaa233
