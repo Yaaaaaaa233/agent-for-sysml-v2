@@ -137,7 +137,7 @@ host 日志里的 timeline.py 错误（500 响应体里有 error.code 和 timeli
   把 presets.presets[] 里 id=sysml-v2 的 broken、mountedRows 里 mcp-sysml-agent 行的
   disabled/fiber.state、以及 compositions 里是否含 @deepseek-ai/dsh-mcp-client 贴出来；
   再跑一次带自检：curl -s "http://127.0.0.1:<端口>/api/sysml-viz/diagnostics?mcpSelfTest=1"
-  贴出 mcpSelfTest.ok / protocolVersion / toolNames（预期 8 个）/ latencyMs / stderrTail。
+  贴出 mcpSelfTest.ok / protocolVersion / toolNames（预期 9 个，含 export_timeline）/ latencyMs / stderrTail。
 - 如果 health 的 model.found=false 或 model 返回 MODEL_NOT_FOUND，先报告并停止（不要继续建模）。
 - 如果 pgrep 没有 run_server.py 或 mcpSelfTest.ok=false：报告「MCP server 未启动/未接通」，
   并把 diagnostics 的两段 JSON 贴出来，然后停止（工具不全，不要继续建模）。
@@ -191,6 +191,13 @@ host 日志里的 timeline.py 错误（500 响应体里有 error.code 和 timeli
 - 相关命令输出（health/model/ps/端口）；
 - 插件页里 dsh-sysml-viz 的 application 状态、preset 列表里「SysML v2 建模」是否 broken；
 - 下一步建议（例如：重启 DSH / 关闭全局 mcp-sysml-agent / 修改 preset 路径）。
+
+【8. 收尾：清掉演示残留（必做，否则模型停在 35 元素）】
+- 用 patch_model 删除 `REQ-Q2-DEMO`，并把 `ATTR-CRUISE-POWER` 的 defaultValue 改回 240.0；
+- `validate_model_json` 确认 0 error / 0 warning；`traceability` 确认 0 缺口；
+- 把 patch_model 返回的 model 原子写回 model-output/q2-demo/q2-demo.ir.json；
+- 预期回到 34 元素 / 20 关系；「过程」面板会多一步（removed REQ-Q2-DEMO / changed ATTR-CRUISE-POWER），
+  这是正常历史记录，**不要清空历史**。
 ```
 
 ---

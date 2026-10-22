@@ -712,6 +712,58 @@ check('画布 fit / 近自由平移边界：430px 视口 fit≈32%，左右对�
   return `fit=32%, x=[${lo.x.toFixed(0)}, ${hi.x.toFixed(0)}], keep=${keep}`
 })
 
+check('节点文字换行：按真实字号与全角箭头估宽，描述行不超出节点内宽', () => {
+  const start = hostSource.indexOf('const CJK =')
+  const end = hostSource.indexOf('function wrapLimited')
+  assert(start > 0 && end > start, '找不到 host 文字度量函数段')
+  const math = new Function(`${hostSource.slice(start, end)}
+    return { textWidth, wrapText }`)()
+  const desc = '功率链：电池 → 电调 → 电机 → 桨；上下桨各占一条并联支路。'
+  const maxPx = 190 - 24
+  const lines = math.wrapText(desc, maxPx, 10.5)
+  assert(lines.join('') === desc, '换行后文本不连续')
+  for (const line of lines) {
+    assert(math.textWidth(line, 10.5) <= maxPx + 0.01, `行宽 ${math.textWidth(line, 10.5).toFixed(1)} > ${maxPx}：${line}`)
+  }
+  assert(Math.abs(math.textWidth('→', 10.5) - 10.5) < 0.01, '箭头未按全角估宽')
+  assert(hostSource.includes('const DEF_WIDTH = 190') && hostSource.includes('DEF_WIDTH - NODE_PADDING'), '结构节点宽度与换行宽度未同源')
+  return `${lines.length} 行，最大 ${Math.max(...lines.map((line) => math.textWidth(line, 10.5))).toFixed(1)}px / ${maxPx}px`
+})
+
+check('节点文字截断：按像素宽度截断并加省略号，不越出节点内宽', () => {
+  const start = clientSource.indexOf('const TEXT_PADDING')
+  const end = clientSource.indexOf('function nodeClipId')
+  assert(start > 0 && end > start, '找不到 client 文字度量函数段')
+  const math = new Function(`${clientSource.slice(start, end)}
+    return { fitText, measuredTextWidth }`)()
+  const maxPx = 136
+  const cases = ['PART-POWER-CHAIN [1]', '共轴对的下桨，转速为下桨转速 n_lower', '«part def»']
+  for (const text of cases) {
+    const fitted = math.fitText(text, maxPx, 10.5)
+    assert(math.measuredTextWidth(fitted, 10.5) <= maxPx + 0.01, `截断后 ${math.measuredTextWidth(fitted, 10.5).toFixed(1)} > ${maxPx}：${fitted}`)
+  }
+  assert(math.fitText('short', maxPx, 10.5) === 'short', '短文本不应被截断')
+  assert(math.fitText(cases[1], maxPx, 10.5).endsWith('…'), '超长文本缺少省略号')
+  return `maxPx=${maxPx}，3 条样例均不越界`
+})
+
+check('client.js 节点文字裁剪 + 标题缩字号 + 边标签避让装配', () => {
+  for (const marker of [
+    'nodeClipId',
+    'clipPath',
+    'fitText(raw, maxPx, renderFont)',
+    'Math.max(10.5, baseFont * maxPx / needed * 0.995)',
+    'edgeLabelBox',
+    'showLabels',
+  ]) {
+    assert(clientSource.includes(marker), `缺少 ${marker}`)
+  }
+  assert(/showLabels\[index\] = !hitsNode && !hitsLabel/.test(clientSource), '边标签缺少避让/去重')
+  assert(!clientSource.includes('LOD_SCALE'), '不应再保留缩放分级逻辑')
+  assert(!clientSource.includes('fullDetail'), '不应再保留「全量」开关状态')
+  return 'clip + fitText + title shrink + label collision wired'
+})
+
 check('client.js 不引用 http(s) 外链', () => {
   const matches = clientSource.match(/https?:\/\//g) ?? []
   assert(matches.length === 0, `发现外部链接 ${matches.length} 处`)

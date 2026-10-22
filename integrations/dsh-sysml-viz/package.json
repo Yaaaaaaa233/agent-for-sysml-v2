@@ -1,6 +1,6 @@
 {
   "name": "dsh-sysml-viz",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "type": "module",
   "description": "DSH bundle: right-sidebar SysML model view (tree, structure/IBD/requirements/state diagrams, live modeling status, per-revision modeling-process timeline) plus the SysML v2 agent preset.",

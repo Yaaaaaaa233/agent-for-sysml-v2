@@ -547,6 +547,38 @@ window.__ModuleLoader__.load({
       return `${value.slice(0, maxLength - 1)}…`
     }
 
+    const TEXT_PADDING = 12
+    /** 与 .svz-l-* 的 CSS 字号保持一致。 */
+    const LINE_FONT = {
+      st: 10.5, ttl: 13.5, sub: 10, bd: 10.5, kv: 10.5, val: 12.5, note: 10.5, chk: 11,
+    }
+    const CJK = /[\u2190-\u21ff\u2b00-\u2bff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/
+
+    function measuredTextWidth(text, fontSize) {
+      let width = 0
+      for (const char of String(text ?? '')) width += CJK.test(char) ? fontSize : fontSize * 0.6
+      return width
+    }
+
+    /** 按真实字号与全角字符宽度截断，避免用字符数估算后越出节点。 */
+    function fitText(text, maxPx, fontSize) {
+      const value = String(text ?? '')
+      if (measuredTextWidth(value, fontSize) <= maxPx) return value
+      let fitted = ''
+      let width = 0
+      for (const char of value) {
+        const charWidth = CJK.test(char) ? fontSize : fontSize * 0.6
+        if (width + charWidth > maxPx - fontSize) break
+        fitted += char
+        width += charWidth
+      }
+      return `${fitted}…`
+    }
+
+    function nodeClipId(node) {
+      return `svz-clip-${String(node.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`
+    }
+
     const CANVAS_PADDING = 22
 
     /** 树节点的元素 id：elementId 优先，兼容 def:/el: 前缀 id。 */
@@ -652,11 +684,33 @@ window.__ModuleLoader__.load({
       ])
     }
 
-    function renderEdge(edge, nodeMap) {
-      const geometry = edgeGeometry(edge, nodeMap)
-      if (!geometry) return null
+    function edgeLabelBox(edge, nodeMap) {
       const label = String(edge.label ?? '')
       const sub = String(edge.sub ?? '')
+      if (!label && !sub) return null
+      const geometry = edgeGeometry(edge, nodeMap)
+      if (!geometry) return null
+      const width = Math.max(
+        Math.min(150, measuredTextWidth(label, 10)),
+        Math.min(170, measuredTextWidth(sub, 9)),
+      )
+      return {
+        x: geometry.labelAt.x - width / 2 - 4,
+        y: geometry.labelAt.y - (sub ? 16 : 14),
+        w: width + 8,
+        h: sub ? 28 : 16,
+      }
+    }
+
+    function rectsOverlap(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+    }
+
+    function renderEdge(edge, nodeMap, showLabel) {
+      const geometry = edgeGeometry(edge, nodeMap)
+      if (!geometry) return null
+      const label = showLabel ? String(edge.label ?? '') : ''
+      const sub = showLabel ? String(edge.sub ?? '') : ''
       const labelY = geometry.labelAt.y - (sub ? 6 : 0)
       return h('g', { key: edge.id, className: 'svz-edge' }, [
         h('path', {
@@ -672,7 +726,7 @@ window.__ModuleLoader__.load({
             x: geometry.labelAt.x,
             y: labelY,
             textAnchor: 'middle',
-          }, truncate(label, 30))
+          }, fitText(label, 150, 10))
           : null,
         sub
           ? h('text', {
@@ -681,16 +735,18 @@ window.__ModuleLoader__.load({
             x: geometry.labelAt.x,
             y: labelY + 12,
             textAnchor: 'middle',
-          }, truncate(sub, 38))
+          }, fitText(sub, 170, 9))
           : null,
       ])
     }
 
     function renderNodeLines(node) {
       const lines = Array.isArray(node.lines) ? node.lines : []
-      const total = lines.reduce((sum, line) => sum + (line.c === 'div' ? LINE_H.div : LINE_H[line.c] ?? LINE_H.bd), 0)
-      const centered = node.kind === 'state'
-      const top = centered ? Math.max(8, (node.h - total) / 2) : 12
+      const lineHeightOf = (line) => (line.c === 'div' ? LINE_H.div : LINE_H[line.c] ?? LINE_H.bd)
+      const total = lines.reduce((sum, line) => sum + lineHeightOf(line), 0)
+      const centeredX = node.kind === 'state'
+      const top = centeredX ? Math.max(8, (node.h - total) / 2) : 12
+      const maxPx = Math.max(24, node.w - TEXT_PADDING * 2)
       const elements = []
       let offset = top
       lines.forEach((line, index) => {
@@ -703,19 +759,25 @@ window.__ModuleLoader__.load({
             y1: node.y + offset + 5,
             y2: node.y + offset + 5,
           }))
-          offset += LINE_H.div
+          offset += lineHeightOf(line)
           return
         }
-        const fontSize = line.c === 'ttl' ? 13.5 : (line.c === 'val' ? 12.5 : (line.c === 'st' ? 10.5 : 10.5))
-        const text = line.c === 'kv' ? truncate(line.t, Math.max(8, Math.floor((node.w - 24) / fontSize * 1.7))) : line.t
+        const baseFont = LINE_FONT[line.c] ?? LINE_FONT.bd
+        const raw = String(line.t ?? '')
+        let renderFont = baseFont
+        if (line.c === 'ttl') {
+          const needed = measuredTextWidth(raw, baseFont)
+          if (needed > maxPx) renderFont = Math.max(10.5, baseFont * maxPx / needed * 0.995)
+        }
         elements.push(h('text', {
           key: `line-${index}`,
           className: `svz-l-${line.c}`,
-          x: centered ? node.x + node.w / 2 : node.x + 12,
-          y: node.y + offset + (LINE_H[line.c] ?? LINE_H.bd) - 2,
-          textAnchor: centered ? 'middle' : 'start',
-        }, String(text)))
-        offset += LINE_H[line.c] ?? LINE_H.bd
+          x: centeredX ? node.x + node.w / 2 : node.x + 12,
+          y: node.y + offset + lineHeightOf(line) - 2,
+          textAnchor: centeredX ? 'middle' : 'start',
+          style: renderFont !== baseFont ? { fontSize: `${renderFont.toFixed(1)}px` } : undefined,
+        }, fitText(raw, maxPx, renderFont)))
+        offset += lineHeightOf(line)
       })
       return elements
     }
@@ -745,11 +807,18 @@ window.__ModuleLoader__.load({
         },
         onMouseEnter: () => onHover(node),
         onMouseLeave: () => onHover(null, node),
-      }, [shape, ...renderNodeLines(node)])
+      }, [
+        shape,
+        h('g', {
+          key: 'text',
+          clipPath: `url(#${nodeClipId(node)})`,
+        }, renderNodeLines(node)),
+      ])
     }
 
     function renderSvg(view, selectedNodeId, addedElementIds, sessionAddedIds, hoveredNodeId, onSelect, onHover, onBackground) {
-      const nodeMap = new Map((view.nodes || []).map((node) => [node.id, node]))
+      const nodes = Array.isArray(view.nodes) ? view.nodes : []
+      const nodeMap = new Map(nodes.map((node) => [node.id, node]))
       const groups = Array.isArray(view.groups) ? view.groups : []
       const edges = Array.isArray(view.edges) ? view.edges : []
       const markers = EDGE_KINDS.map((kind) => h('marker', {
@@ -762,11 +831,33 @@ window.__ModuleLoader__.load({
         markerHeight: 7,
         orient: 'auto-start-reverse',
       }, h('path', { d: 'M0,0 L8,4 L0,8 Z', className: `svz-arrow-${kind}` })))
+      const clips = nodes
+        .filter((node) => Array.isArray(node.lines) && node.lines.length > 0)
+        .map((node) => h('clipPath', { key: `clip-${node.id}`, id: nodeClipId(node) }, h('rect', {
+          x: node.x + 3,
+          y: node.y + 2,
+          width: Math.max(0, node.w - 6),
+          height: Math.max(0, node.h - 4),
+          rx: node.kind === 'state' ? 12 : 7,
+        })))
+      const showLabels = edges.map(() => true)
+      const placed = []
+      edges.forEach((edge, index) => {
+        const box = edgeLabelBox(edge, nodeMap)
+        if (!box) {
+          showLabels[index] = false
+          return
+        }
+        const hitsNode = nodes.some((node) => rectsOverlap(box, node))
+        const hitsLabel = placed.some((other) => rectsOverlap(box, other))
+        showLabels[index] = !hitsNode && !hitsLabel
+        if (showLabels[index]) placed.push(box)
+      })
       const children = [
-        h('defs', { key: 'defs' }, markers),
+        h('defs', { key: 'defs' }, [...markers, ...clips]),
         ...groups.map((group) => renderGroup(group)),
-        ...edges.map((edge) => renderEdge(edge, nodeMap)).filter(Boolean),
-        ...(view.nodes || []).map((node) => renderNode(node, selectedNodeId, addedElementIds, sessionAddedIds, hoveredNodeId, onSelect, onHover)),
+        ...edges.map((edge, index) => renderEdge(edge, nodeMap, showLabels[index])).filter(Boolean),
+        ...nodes.map((node) => renderNode(node, selectedNodeId, addedElementIds, sessionAddedIds, hoveredNodeId, onSelect, onHover)),
       ]
       return h('svg', {
         className: 'svz-svg',

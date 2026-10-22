@@ -40,7 +40,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const PLUGIN_ID = 'dsh-sysml-viz'
-export const VERSION = '0.1.6'
+export const VERSION = '0.1.7'
 export const GRAPH_SCHEMA = 'sysml-graph/v1'
 export const IR_SCHEMA = 'sysml-ir/v1'
 export const HISTORY_SCHEMA = 'sysml-viz-history/v1'
@@ -480,11 +480,12 @@ export async function resolveModelPath(cfg, explicitPath, extraRoots = []) {
  * 通用小工具
  * ------------------------------------------------------------------ */
 
-const CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/
+const CJK = /[\u2190-\u21ff\u2b00-\u2bff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/
+const LATIN_WIDTH_RATIO = 0.6
 
 function textWidth(text, fontSize) {
   let width = 0
-  for (const char of String(text)) width += CJK.test(char) ? fontSize : fontSize * 0.56
+  for (const char of String(text)) width += CJK.test(char) ? fontSize : fontSize * LATIN_WIDTH_RATIO
   return width
 }
 
@@ -493,7 +494,7 @@ function wrapText(text, maxPx, fontSize) {
   let current = ''
   let width = 0
   for (const char of String(text ?? '')) {
-    const charWidth = CJK.test(char) ? fontSize : fontSize * 0.56
+    const charWidth = CJK.test(char) ? fontSize : fontSize * LATIN_WIDTH_RATIO
     if (width + charWidth > maxPx && current) {
       lines.push(current)
       current = ''
@@ -517,7 +518,16 @@ function wrapLimited(text, maxPx, fontSize, maxLines) {
 const LINE_HEIGHT = {
   st: 13, ttl: 19, sub: 13, div: 10, bd: 14, kv: 13, val: 18, note: 13, chk: 15,
 }
-const NODE_PADDING = 24
+/** 与 client.js 的 .svz-l-* 字号保持一致，换行估算不能再用「大概 10px」。 */
+const LINE_FONT = {
+  st: 10.5, ttl: 13.5, sub: 10, bd: 10.5, kv: 10.5, val: 12.5, note: 10.5, chk: 11,
+}
+const TEXT_PADDING = 12
+const NODE_PADDING = TEXT_PADDING * 2
+const DEF_WIDTH = 190
+const REQUIREMENT_WIDTH = 300
+const CONSTRAINT_WIDTH = 260
+const STATE_DEF_WIDTH = 320
 
 function measureLines(lines) {
   let height = NODE_PADDING
@@ -619,7 +629,7 @@ function defLines(element, attributes) {
   const lines = [ST('«part def»'), TTL(element.name ?? element.id), SUB(element.id)]
   const description = element.properties?.description
   if (typeof description === 'string' && description) {
-    lines.push(DIV, ...wrapLimited(description, 186, 10, 2))
+    lines.push(DIV, ...wrapLimited(description, DEF_WIDTH - NODE_PADDING, LINE_FONT.bd, 2))
   }
   const owned = attributes.filter((attribute) => attribute.owner === element.id)
   if (owned.length > 0) {
@@ -645,10 +655,10 @@ function requirementLines(element) {
     TTL(element.name ?? element.id),
     SUB(element.id),
     DIV,
-    ...wrapLimited(properties.text, 276, 10.5, 2),
+    ...wrapLimited(properties.text, REQUIREMENT_WIDTH - NODE_PADDING, LINE_FONT.bd, 2),
   ]
   if (properties.acceptanceCriteria) {
-    lines.push(...wrapLimited('ac: ' + properties.acceptanceCriteria, 276, 10, 2))
+    lines.push(...wrapLimited('ac: ' + properties.acceptanceCriteria, REQUIREMENT_WIDTH - NODE_PADDING, LINE_FONT.bd, 2))
   }
   if (properties.verifyMethod) lines.push(KV('verify', properties.verifyMethod))
   if (properties.priority) lines.push(KV('priority', properties.priority))
@@ -684,7 +694,9 @@ function stateDefinitionLines(element) {
   const transitions = Array.isArray(properties.transitions) ? properties.transitions : []
   const lines = [ST('«state def»'), TTL(element.name ?? element.id), SUB(element.id)]
   lines.push(KV('states', String(states.length)), KV('transitions', String(transitions.length)))
-  if (properties.description) lines.push(DIV, ...wrapLimited(properties.description, 260, 10, 2))
+  if (properties.description) {
+    lines.push(DIV, ...wrapLimited(properties.description, STATE_DEF_WIDTH - NODE_PADDING, LINE_FONT.bd, 2))
+  }
   return lines
 }
 
@@ -718,7 +730,9 @@ function constraintLines(element) {
   const properties = element.properties ?? {}
   const lines = [ST('«constraint def»'), TTL(element.name ?? element.id), SUB(element.id), DIV]
   const expression = properties.expression ?? ''
-  for (const row of wrapText(expression, 260, 10)) lines.push({ c: 'kv', t: row })
+  for (const row of wrapText(expression, CONSTRAINT_WIDTH - NODE_PADDING, LINE_FONT.kv)) {
+    lines.push({ c: 'kv', t: row })
+  }
   const parameters = Array.isArray(properties.parameters) ? properties.parameters : []
   if (parameters.length > 0) lines.push(DIV, KV('parameters', String(parameters.length)))
   return lines
@@ -2091,8 +2105,8 @@ function autoLayout(kind, nodes, edges) {
 /* ---- graph.py 投影（sysml-graph/v1，只做投影不做布局）→ 可渲染视图 ---- */
 
 const PROJECTED_WIDTH = {
-  block: 190, usage: 170, requirement: 300, action: 230, state: 142,
-  note: 280, trace: 210, attr: 210, constraint: 260,
+  block: DEF_WIDTH, usage: 170, requirement: REQUIREMENT_WIDTH, action: 230, state: 142,
+  note: 280, trace: 210, attr: 210, constraint: CONSTRAINT_WIDTH,
 }
 
 function projectedNodeKind(rawKind, element) {
@@ -2265,7 +2279,7 @@ function layoutStructureProjection(nodes, mappedEdges) {
   }
   for (const list of levels.values()) list.sort((a, b) => a.label.localeCompare(b.label))
 
-  const definitionWidth = 190
+  const definitionWidth = DEF_WIDTH
   const usageWidth = 160
   const usageHeight = 54
   const gapX = 36
@@ -2470,7 +2484,7 @@ function layoutRequirementProjection(nodes, mappedEdges) {
     byDepth.get(value).push(requirement)
   }
   for (const list of byDepth.values()) list.sort((a, b) => a.label.localeCompare(b.label))
-  const cardWidth = 300
+  const cardWidth = REQUIREMENT_WIDTH
   const columnGap = 54
   const rowGap = 26
   const outNodes = []
@@ -2500,7 +2514,7 @@ function layoutRequirementProjection(nodes, mappedEdges) {
   let providerY = 58
   const providerMap = new Map()
   for (const provider of providerNodes) {
-    provider.w = Math.min(240, provider.w || 210)
+    provider.w = provider.kind === 'note' ? STATE_DEF_WIDTH : Math.min(240, provider.w || 210)
     provider.x = providerX
     provider.y = providerY
     providerY += provider.h + 18
@@ -2551,7 +2565,7 @@ function layoutStateProjection(nodes, mappedEdges) {
   const outNodes = []
   let headerBottom = 30
   for (const definition of definitionNodes) {
-    definition.w = 320
+    definition.w = STATE_DEF_WIDTH
     definition.x = 40
     definition.y = 30
     headerBottom = definition.y + definition.h
