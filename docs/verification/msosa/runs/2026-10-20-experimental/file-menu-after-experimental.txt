@@ -1,0 +1,24 @@
+# MSOSA File 菜单（AX 逐项读取）
+# 时间：2026-10-20 15:16（已注入 -Dmd.sysml2.experimental.features=true 并重启）
+# perspective：System Engineer SysML v2，项目 q1-msosa-golden 已打开
+# 结论：没有 Import From；Export To 出现 3 个 [Experimental] 导出项，但整体仍 disabled。
+
+New Project... True
+Open Project... True
+Local Repository... True
+Save Project True
+Save Project As... True
+Close Project True
+Close All Projects True
+Migrate Legacy DDL Models False
+Open Element from URL True
+Export To False -> [('Project Usage...', False), ('Older Version (2024x)...', False), ('SysML v2 Textual Notation', False), ('[Experimental] SysML v2 Textual Notation with Diagrams', False), ('SysML v2 Model', False), ('[Experimental] SysML v2 Model as MDZIP', False), ('[Experimental] SysML v2 Model to Active Project', False), ('XPDL File', False), ('BPMN2 File', False)]
+Convert To False -> [('DoDAF', False), ('DoDAF 2.0', False), ('EA-BPMN', False), ('MODAF', False), ('NAF', False), ('NAF 4.0', False), ('UAF', False)]
+Save as Image... True
+Print... True
+Print Preview True
+Print Options... True
+Project Properties True
+Switch Projects True -> [('q1-msosa-golden', True)]
+1 q1-msosa-golden True
+Exit True

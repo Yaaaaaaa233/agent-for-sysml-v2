@@ -5,7 +5,7 @@
   "build": "2026.1.0-42-b71a9669（BUILD 2026-05-26；msosa.log 的 Version Info 记为「2026x Refresh1 Enterprise Community Seat」）",
   "installerFile": "No_Magic_2026x_Refresh1.Magic_Systems_of_Systems_Architect_2026x_Refresh1_mac_aarch64.dmg",
   "licenseMode": "Use in Community Mode（Community Seat）",
-  "perspective": "System Engineer SysML v2（⚠️ 首次切换后回填确认）",
+  "perspective": "System Engineer SysML v2（2026-10-20 10:41 项目创建后确认）",
   "os": "macOS 26.6.2 (25G83) / Apple M5",
   "plugins": [
     {
@@ -15,19 +15,27 @@
     },
     {
       "name": "SysML v1 Plugin",
-      "version": "⚠️ 首装回填（目录 com.nomagic.magicdraw.sysml 存在）"
+      "version": "2026x Refresh1（plugin.xml internalVersion=202600000；目录 com.nomagic.magicdraw.sysml）"
     },
     {
       "name": "Cameo Requirements Modeler",
-      "version": "⚠️ 首装回填（目录 com.nomagic.requirements 存在）"
+      "version": "2026x Refresh1（plugin.xml internalVersion=202600000；目录 com.nomagic.requirements）"
     }
   ],
   "optionalPluginsPresent": [
-    "com.nomagic.magicdraw.sysml2.evaluation（CE 下 Not supported：缺商业 CST/MMA）",
-    "com.nomagic.magicdraw.sysml2.simulation",
-    "com.nomagic.magicdraw.md_sysml2_migration"
+    "com.nomagic.magicdraw.sysml2.evaluation：插件管理器显示 Installed，但启动日志为 Not supported（缺商业 CST/MMA）；CE 下不用于本验证",
+    "com.nomagic.magicdraw.sysml2.simulation：Installed，启动日志 Not supported",
+    "com.nomagic.magicdraw.md_sysml2_migration：Installed（SysML v1 to SysML v2 Migration）"
   ],
-  "operator": "⚠️ 待填",
+  "communityEditionLimits": {
+    "observedOn": "2026-10-20",
+    "fileMenuImportFrom": "不存在",
+    "exportToEnabled": false,
+    "convertToEnabled": false,
+    "openProjectAcceptsSysml": false,
+    "evidence": "runs/2026-10-20-import/screenshots/20261020-1118_golden_capability_01_file-menu-no-import-export-disabled.png; ..._1059_golden_capability_02_open-project-sysml-not-selectable.png"
+  },
+  "operator": "叶安",
   "date": "2026-10-20",
   "evidenceRoot": "sysml-modeling-agent/docs/verification/msosa/"
 }

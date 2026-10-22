@@ -1,0 +1,2 @@
+32b1a4954fed191f7aebede6df8abb4b10084f0af9b722dd7e5888f9140ec515  00-smoke-minimal.sysml
+bb64cc2cbfdc5f5667049a76f6b57c4925a6ed29b2344c94d09d70e9ac6f6129  golden-coaxial-power-chain.sysml
