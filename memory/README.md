@@ -92,7 +92,8 @@ gh pr create --base main --label memory --fill
 ## 防腐化
 
 - `validate`：结构/引用/生命周期/过期提醒（CI 必过）；
-- `check`：断言 + evidence 文件核验（`--git` 再加提交核验）；未入库 evidence 先警告，`--strict-tracked` 才失败；
+- `check`：断言 + evidence 文件核验（`--git` 再加提交核验）；**只对 `status: active` 执行**，
+  superseded/deprecated 只作历史查阅；未入库 evidence 在 `--strict-tracked` 下算失败；
 - `rot`：周度 job 把 `check` 失败项与 `stats` 到期项开成 issue；
 - `eval`：dev / held-out / test 三套，卡 **MRR 回归**，不追求单套 1.00。
 
@@ -109,3 +110,13 @@ python memory/tools/memory.py stats
 python memory/tools/memory.py eval
 python memory/tools/memory.py next-id
 ```
+
+## MCP 侧（第 10 个工具 `memory`）
+
+DSH 会话里不必敲命令行，同样的能力由 `mcp-server/run_server.py` 的 `memory` 工具提供：
+
+- `op=search`：问题 + `scope`（即将改的路径）→ `{ok, count, results:[{id,kind,title,score,gist,stale,verified,scopeMiss}]}`；
+- `op=propose`：完整候选（frontmatter+正文）→ 默认 `dry_run=true` 只预检，`dry_run=false` 只写 `.spool/`；
+  不联网、不改 IR、不自动提交——`drain` 与提 PR 仍是人的动作。
+
+这是"记忆要改变 agent 行为"的接入点：先 search 再动手，比把记忆塞进系统提示更省 token、更容易审计。

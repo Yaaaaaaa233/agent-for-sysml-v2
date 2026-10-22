@@ -463,7 +463,8 @@ def cmd_check(args: argparse.Namespace) -> int:
     ran = 0
     tracked = tracked_files(root)
     for record in records:
-        if record.problems:
+        # superseded / deprecated 描述的是"过去"，断言不再当门禁（否则每次取代都会误报）
+        if record.problems or record.status != "active":
             continue
         for item in record.checks:
             kind, _, rest = item.partition(":")
@@ -1002,7 +1003,18 @@ def _spool(memory_root: Path) -> Path:
 
 def _preflight(memory_root: Path, candidate: Record, root: Path | None) -> tuple[list[str], list[str]]:
     errors, warnings = validate_records([candidate], root)
+    # 单条校验把 supersedes 目标当悬空（目标在语料里，不在候选里）——按语料补查生命周期
+    errors = [
+        error for error in errors
+        if "E-SUPERSEDES-" not in error and "E-SUPERSEDED-BY" not in error
+    ]
     existing = load_records(memory_root)
+    by_id = {record.id: record for record in existing}
+    for target_id in candidate.supersedes:
+        if target_id not in by_id:
+            errors.append(
+                f"E-SUPERSEDES-MISSING {candidate.path}: supersedes 指向不存在的记录 {target_id}"
+            )
     for record in existing:
         if record.id == candidate.id:
             errors.append(f"E-PROPOSE-ID-DUP {candidate.path}: id {candidate.id} 已被 {record.path.name} 占用")
@@ -1068,6 +1080,27 @@ def cmd_propose(args: argparse.Namespace) -> int:
     return cmd_drain(argparse.Namespace(memory_root=str(memory_root), root=str(root), strict_tracked=False))
 
 
+def _flip_superseded(memory_root: Path, new_id: str, target_ids: list[str]) -> list[str]:
+    """把被取代的旧记录只改两行：status → superseded、superseded_by → 新 id（正文不动）。"""
+    flipped: list[str] = []
+    for target_id in target_ids:
+        for path in (memory_root / "records").rglob(f"{target_id}-*.md"):
+            text = path.read_text(encoding="utf-8")
+            if "status: superseded" not in text:
+                text = re.sub(r"^status: .*$", "status: superseded", text, count=1, flags=re.M)
+            if "superseded_by:" in text:
+                text = re.sub(r"^superseded_by: .*$", f"superseded_by: {new_id}", text, count=1, flags=re.M)
+            else:
+                text = re.sub(
+                    r"^(confidence: [^\n]*\n)",
+                    r"\1superseded_by: " + new_id + "\n",
+                    text, count=1, flags=re.M,
+                )
+            path.write_text(text, encoding="utf-8")
+            flipped.append(target_id)
+    return flipped
+
+
 def cmd_drain(args: argparse.Namespace) -> int:
     memory_root, root = _roots(args)
     spool = _spool(memory_root)
@@ -1088,7 +1121,21 @@ def cmd_drain(args: argparse.Namespace) -> int:
             continue
         target = _candidate_targets(memory_root, data, created)
         candidate = Record(path=target, data=data, body=body)
-        errors, _ = validate_records(existing + [candidate], root)
+        # 预演 supersedes 翻转：在内存里把被取代记录改成 superseded 再整体校验，
+        # 通过后才动盘（避免"先改旧记录、再发现候选有错"）。
+        planned: list[Record] = []
+        planned_ids: set[str] = set()
+        for target_id in candidate.supersedes:
+            old_record = next((item for item in existing if item.id == target_id), None)
+            if old_record is None:
+                continue
+            old_data = dict(old_record.data)
+            old_data["status"] = "superseded"
+            old_data["superseded_by"] = data["id"]
+            planned.append(Record(path=old_record.path, data=old_data, body=old_record.body))
+            planned_ids.add(target_id)
+        corpus = [item for item in existing if item.id not in planned_ids] + planned + [candidate]
+        errors, _ = validate_records(corpus, root)
         if errors:
             blocked.append(path)
             for error in errors:
@@ -1097,7 +1144,9 @@ def cmd_drain(args: argparse.Namespace) -> int:
         target.parent.mkdir(parents=True, exist_ok=True)
         os.replace(path, target)
         moved.append(target)
-        existing.append(Record(path=target, data=data, body=body))
+        for old_id in _flip_superseded(memory_root, str(data.get("id")), candidate.supersedes):
+            print(f"FLIP   {old_id} → status: superseded（旧记录只改状态，正文保留）")
+        existing = load_records(memory_root)  # 旧记录状态已变，重建后继续校验下一条
         print(f"OK     {path.name} → {target.relative_to(memory_root)}")
     if blocked:
         blocked_dir = spool / "blocked"

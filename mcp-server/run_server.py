@@ -59,7 +59,7 @@ from tools.trace import traceability  # noqa: E402
 from tools.validator import load_model, validate_model_json  # noqa: E402
 
 SERVER_NAME = "sysml-modeling-agent"
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = "1.2.0"
 
 INSTRUCTIONS = """\
 SysML v2 建模智能体（二期）。核心路线是「LLM 填表、代码建模」：
@@ -82,6 +82,9 @@ SysML v2 建模智能体（二期）。核心路线是「LLM 填表、代码建�
 8. traceability  追溯检查——需求矩阵 / 缺口 / 影响面；
 9. 可选：export_timeline  把 .sysml-viz/history/ 的建模步骤渲染成「建模全过程」SVG，
    用于回答"每一轮对话各加了什么"；不给 history_dir 时从 model_path / 当前工作目录往上找。
+10. 可选但推荐：memory  改模型/改工具/回答"以前怎么定的"之前先查项目记忆。
+   op=search（默认）按问题 + scope（即将改的文件）检索，返回 id/title/gist/是否过期/是否已核验；
+   op=propose 只把候选写进 memory/.spool/（不联网、不改 IR、不自动提交），之后人工 drain + 批 PR。
 
 导出仿真参数表用 export_simulink（csv/json/md），不要手工抄参数。
 出错时改 JSON，不要改文本——文本是代码生成的，手改会漂移。
@@ -329,6 +332,46 @@ TOOL_SPECS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "name": "memory",
+        "description": (
+            "项目记忆库（memory/）：op=search 只读检索项目记忆（决策/坑/约定/术语/会话摘要），"
+            "支持按 kind 与 scope（即将改动的路径）过滤，返回 id/title/gist/score/是否过期/是否已核验；"
+            "op=propose 预检一条候选记忆并只写入 memory/.spool/（不联网、不改 IR、不自动提交）。"
+            "改模型、改工具、回答“以前怎么定的”之前，先 search 一次再动手。"
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "op": {
+                    "type": "string",
+                    "enum": ["search", "propose"],
+                    "description": "search=检索（默认）；propose=生成候选",
+                },
+                "query": {"type": "string", "description": "检索问题（op=search 用）"},
+                "scope": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "本次要改的文件路径（可多条），命中 scope 的记录会加权",
+                },
+                "kind": {
+                    "type": "string",
+                    "description": "逗号分隔：decision,gotcha,convention,glossary,session-digest",
+                },
+                "limit": {"type": "integer", "description": "返回条数，默认 5"},
+                "budget": {"type": "integer", "description": "输出字符预算，默认 900"},
+                "record": {
+                    "type": "string",
+                    "description": "完整候选记忆（frontmatter + 正文），op=propose 必填",
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "op=propose 时是否只预检不落盘，默认 true",
+                },
+            },
+            "required": ["op"],
+        },
+    },
 ]
 
 TOOL_NAMES = [spec["name"] for spec in TOOL_SPECS]
@@ -467,6 +510,157 @@ def call_export_timeline(
     return result
 
 
+# --------------------------------------------------------------------------------------
+# 项目记忆库（memory/）：只读检索 + 候选写入（只进 .spool，不联网、不改 IR）
+# --------------------------------------------------------------------------------------
+
+MEMORY_SCHEMA = "sysml-memory/v0.2"
+
+
+def _locate_memory_root() -> Optional[Path]:
+    """找 <repo>/memory：先按本文件位置（mcp-server/ 的上一级），再从 cwd 逐级向上。"""
+    candidates: List[Path] = [Path(__file__).resolve().parents[1] / "memory"]
+    current = Path.cwd().resolve()
+    for _ in range(6):
+        candidates.append(current / "memory")
+        if current.parent == current:
+            break
+        current = current.parent
+    for candidate in candidates:
+        if (candidate / "tools" / "memory.py").is_file():
+            return candidate
+    return None
+
+
+def _load_memory_module():
+    """按需加载 memory/tools/memory.py（不在仓库里就返回 (None, None)）。"""
+    root = _locate_memory_root()
+    if root is None:
+        return None, None
+    import importlib.util
+    import sys as _sys
+
+    module_name = "sysml_memory_tool"
+    if module_name in _sys.modules:
+        return _sys.modules[module_name], root
+    spec = importlib.util.spec_from_file_location(module_name, root / "tools" / "memory.py")
+    module = importlib.util.module_from_spec(spec)
+    _sys.modules[module_name] = module  # dataclass 需要模块已注册
+    spec.loader.exec_module(module)
+    return module, root
+
+
+def call_memory(
+    op: str = "search",
+    query: str = "",
+    scope: Optional[List[str]] = None,
+    kind: Optional[str] = None,
+    limit: int = 5,
+    budget: int = 900,
+    record: Optional[str] = None,
+    dry_run: bool = True,
+) -> Dict[str, Any]:
+    """项目记忆库：``search`` 只读检索；``propose`` 只把候选写进 ``memory/.spool/``。"""
+    module, memory_root = _load_memory_module()
+    if module is None or memory_root is None:
+        return {
+            "ok": False,
+            "schema": MEMORY_SCHEMA,
+            "errors": [{
+                "code": "E-MEMORY-UNAVAILABLE",
+                "message": "找不到 memory/tools/memory.py；请把仓库里的 memory/ 放在仓库根。",
+            }],
+        }
+    repo_root = memory_root.parent
+    try:
+        if op == "search":
+            searcher = module.Searcher(module.load_records(memory_root))
+            kinds = [item.strip() for item in str(kind).split(",") if item.strip()] if kind else None
+            results = searcher.search(
+                query or "",
+                kinds=kinds,
+                statuses=["active"],
+                touched=list(scope) if scope else None,
+                limit=max(1, min(int(limit or 5), 20)),
+            )
+            fields = ("id", "kind", "title", "score", "gist", "stale", "verified",
+                      "scopeMiss", "scope", "tags", "aliases")
+            trimmed = [{key: item.get(key) for key in fields} for item in results]
+            return {
+                "ok": True,
+                "schema": MEMORY_SCHEMA,
+                "op": "search",
+                "count": len(trimmed),
+                "results": trimmed,
+                "errors": [],
+                "warnings": [],
+            }
+        if op == "propose":
+            if not record or not str(record).strip():
+                return {
+                    "ok": False,
+                    "schema": MEMORY_SCHEMA,
+                    "op": "propose",
+                    "errors": [{
+                        "code": "E-MEMORY-RECORD-REQUIRED",
+                        "message": "op=propose 需要 record（frontmatter + 正文）。",
+                    }],
+                }
+            data, body = module.parse_frontmatter(str(record))
+            created = module._parse_dt(str(data.get("created", "")))
+            target = module._candidate_targets(memory_root, data, created)
+            candidate = module.Record(path=target, data=data, body=body)
+            errors, warnings = module._preflight(memory_root, candidate, repo_root)
+            if errors:
+                return {
+                    "ok": False,
+                    "schema": MEMORY_SCHEMA,
+                    "op": "propose",
+                    "targetPath": str(target),
+                    "errors": [{"code": "E-MEMORY-PROPOSE", "message": message} for message in errors],
+                    "warnings": warnings,
+                }
+            if dry_run:
+                return {
+                    "ok": True,
+                    "schema": MEMORY_SCHEMA,
+                    "op": "propose",
+                    "dryRun": True,
+                    "targetPath": str(target),
+                    "errors": [],
+                    "warnings": warnings,
+                }
+            spool = memory_root / ".spool"
+            spool.mkdir(parents=True, exist_ok=True)
+            spool_path = spool / ("%s-%s.md" % (data.get("id"), os.urandom(3).hex()))
+            with open(spool_path, "x", encoding="utf-8") as handle:
+                handle.write(str(record))
+            return {
+                "ok": True,
+                "schema": MEMORY_SCHEMA,
+                "op": "propose",
+                "dryRun": False,
+                "targetPath": str(target),
+                "spoolPath": str(spool_path),
+                "errors": [],
+                "warnings": warnings,
+                "next": "跑 memory.py drain 把 spool 搬进 records/，再提批 PR（本工具不会自动提交）",
+            }
+        return {
+            "ok": False,
+            "schema": MEMORY_SCHEMA,
+            "op": op,
+            "errors": [{"code": "E-MEMORY-OP", "message": "op 只能是 search / propose，实际 %r" % op}],
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "schema": MEMORY_SCHEMA,
+            "op": op,
+            "errors": [{"code": "E-MEMORY-INTERNAL", "message": str(exc)}],
+        }
+
+
 def dispatch(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """按工具名分发，供本地调用模式使用。"""
     if tool_name == "validate_model_json":
@@ -521,6 +715,17 @@ def dispatch(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
             model_path=arguments.get("model_path"),
             output=arguments.get("output"),
             title=arguments.get("title"),
+        )
+    if tool_name == "memory":
+        return call_memory(
+            op=arguments.get("op", "search"),
+            query=arguments.get("query", ""),
+            scope=arguments.get("scope"),
+            kind=arguments.get("kind"),
+            limit=arguments.get("limit", 5),
+            budget=arguments.get("budget", 900),
+            record=arguments.get("record"),
+            dry_run=arguments.get("dry_run", True),
         )
     return {
         "ok": False,
@@ -714,6 +919,25 @@ def build_server(auth_token: Optional[str]):
             history_dir=history_dir, model_path=model_path, output=output, title=title
         )
 
+    @server.tool(
+        name="memory",
+        description=SPEC_BY_NAME["memory"]["description"],
+    )
+    def _memory(
+        op: str = "search",
+        query: str = "",
+        scope: Optional[List[str]] = None,
+        kind: Optional[str] = None,
+        limit: int = 5,
+        budget: int = 900,
+        record: Optional[str] = None,
+        dry_run: bool = True,
+    ) -> dict:
+        return call_memory(
+            op=op, query=query, scope=scope, kind=kind, limit=limit,
+            budget=budget, record=record, dry_run=dry_run,
+        )
+
     return server, source
 
 
@@ -750,6 +974,10 @@ _LOCAL_ARGUMENT_KEYS = frozenset(
         "model_path",
         "output",
         "title",
+        "op",
+        "record",
+        "dry_run",
+        "budget",
     }
 )
 
@@ -878,7 +1106,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="run_server.py",
         description="sysml-modeling-agent —— MCP 工具服务"
-        "（validate / generate / query / verify / patch / trace / parse / export / timeline）",
+        "（validate / generate / query / verify / patch / trace / parse / export / timeline / memory）",
     )
     parser.add_argument(
         "--transport",

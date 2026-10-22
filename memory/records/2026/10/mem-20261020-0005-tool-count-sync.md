@@ -1,7 +1,7 @@
 ---
 id: mem-20261020-0005
 kind: gotcha
-status: active
+status: superseded
 title: 工具数/名单改动要同步 5 处；当前 9 个（含 export_timeline）
 created: 2026-10-20T00:10:00+08:00
 author: dsh-lead/deepseek-v4.1-flash/session-a89d8bff
@@ -9,6 +9,7 @@ scope: [mcp-server/run_server.py, tests/test_server.py, "README.md", integration
 tags: [mcp, tools, sync, gotcha]
 aliases: [工具数量, 工具表, 新增工具, 删工具]
 confidence: high
+superseded_by: mem-20261022-0017
 review_after: 2027-04-20
 supersedes: [mem-20261017-0011]
 evidence:

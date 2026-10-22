@@ -72,7 +72,7 @@ class TestCliContract(unittest.TestCase):
     def test_version_flag(self):
         result = run_cli("--version")
         self.assertEqual(result.returncode, 0)
-        self.assertIn("1.1.0", result.stdout)
+        self.assertIn("1.2.0", result.stdout)
         self.assertNotIn("1.0.0", result.stdout)
 
     def test_help_lists_contract_arguments(self):
@@ -148,7 +148,7 @@ class TestCliContract(unittest.TestCase):
 class TestLocalInvokeMode(unittest.TestCase):
     """不装 MCP 依赖时的等价退路：--list-tools / --call。"""
 
-    def test_list_tools_exposes_all_nine_tools(self):
+    def test_list_tools_exposes_all_ten_tools(self):
         result = run_cli("--list-tools")
         self.assertEqual(result.returncode, 0)
         payload = json.loads(result.stdout)
@@ -165,13 +165,14 @@ class TestLocalInvokeMode(unittest.TestCase):
                 "parse_sysml",
                 "export_simulink",
                 "export_timeline",
+                "memory",
             ],
         )
         for tool in payload["tools"]:
             self.assertIn("description", tool)
             self.assertIn("inputSchema", tool)
-            # parse_sysml 的入参是文本、export_timeline 的入参是历史目录，其余工具都以 IR model 为入口
-            if tool["name"] not in {"parse_sysml", "export_timeline"}:
+            # parse_sysml 入参是文本、export_timeline 入参是历史目录、memory 入参是 op/query，其余以 IR model 为入口
+            if tool["name"] not in {"parse_sysml", "export_timeline", "memory"}:
                 self.assertIn("model", tool["inputSchema"]["properties"])
         parse_spec = next(tool for tool in payload["tools"] if tool["name"] == "parse_sysml")
         self.assertEqual(parse_spec["inputSchema"]["required"], ["text"])
@@ -559,7 +560,7 @@ class TestToolWrappers(unittest.TestCase):
         self.assertEqual(set(run_server.TOOL_NAMES), {
             "validate_model_json", "generate_sysml", "query_model", "verify_sysml",
             "patch_model", "traceability", "parse_sysml", "export_simulink",
-            "export_timeline",
+            "export_timeline", "memory",
         })
         model = json.loads(GOLDEN_IR.read_text(encoding="utf-8"))
         arguments = {
@@ -575,6 +576,11 @@ class TestToolWrappers(unittest.TestCase):
                     self.assertIsInstance(payload, dict)
                     self.assertFalse(payload["ok"])
                     self.assertEqual(payload["errors"][0]["code"], "E-HISTORY-NOT-FOUND")
+                continue
+            if name == "memory":
+                payload = run_server.dispatch(name, {"op": "search", "query": "工具数"})
+                self.assertIsInstance(payload, dict)
+                self.assertTrue(payload["ok"], payload)
                 continue
             self.assertIsInstance(run_server.dispatch(name, arguments), dict)
 
@@ -771,11 +777,11 @@ class TestQueryRootDefault(unittest.TestCase):
         for edge in ("relations[].target", "typeRef", "parameters", "sourceRef", "targetRef"):
             self.assertIn(edge, description, msg="query_model 描述缺少引用边口径：%s" % edge)
 
-    def test_server_version_is_1_1_0(self):
-        self.assertEqual(self.run_server.SERVER_VERSION, "1.1.0")
+    def test_server_version_is_1_2_0(self):
+        self.assertEqual(self.run_server.SERVER_VERSION, "1.2.0")
 
-    def test_nine_tools_registered(self):
-        self.assertEqual(len(self.run_server.TOOL_NAMES), 9)
+    def test_ten_tools_registered(self):
+        self.assertEqual(len(self.run_server.TOOL_NAMES), 10)
         self.assertEqual(
             self.run_server.TOOL_NAMES,
             [
@@ -788,8 +794,71 @@ class TestQueryRootDefault(unittest.TestCase):
                 "parse_sysml",
                 "export_simulink",
                 "export_timeline",
+                "memory",
             ],
         )
+
+
+class TestMemoryTool(unittest.TestCase):
+    """memory 工具：只读检索 + 候选预检（只进 .spool，不自动提交）。"""
+
+    def test_search_finds_tool_count_memory(self):
+        import run_server
+
+        payload = run_server.dispatch(
+            "memory",
+            {"op": "search", "query": "工具数要改哪些文件", "scope": ["mcp-server/run_server.py"]},
+        )
+        self.assertTrue(payload["ok"], payload)
+        self.assertGreaterEqual(payload["count"], 1)
+        ids = [item["id"] for item in payload["results"]]
+        self.assertTrue(any(record_id.startswith("mem-") for record_id in ids))
+        self.assertIn("memory", payload["schema"])
+
+    def test_search_unknown_op(self):
+        import run_server
+
+        payload = run_server.dispatch("memory", {"op": "unknown"})
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["errors"][0]["code"], "E-MEMORY-OP")
+
+    def test_propose_requires_record(self):
+        import run_server
+
+        payload = run_server.dispatch("memory", {"op": "propose"})
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["errors"][0]["code"], "E-MEMORY-RECORD-REQUIRED")
+
+    def test_propose_dry_run_ok(self):
+        import run_server
+
+        record = (
+            "---\n"
+            "id: mem-20261022-9999\n"
+            "kind: gotcha\n"
+            "status: active\n"
+            "slug: memory-tool-test\n"
+            "title: 测试候选：memory 工具的 propose 预检\n"
+            "created: 2026-10-22T20:00:00+08:00\n"
+            "author: tests/unit\n"
+            "scope: [memory/**]\n"
+            "tags: [test]\n"
+            "confidence: low\n"
+            "review_after: 2027-01-01\n"
+            "evidence:\n"
+            "  - file:README.md\n"
+            "---\n\n"
+            "## 内容\n这条候选只用于验证 memory 工具的 propose 预检，不写任何文件；"
+            "正文要足够长才能通过 E-BODY-SHORT 检查。\n\n"
+            "## 为什么\npropose 必须默认 dry-run，避免 agent 误写；预检失败要给出可读错误码。\n\n"
+            "## 用法\n看到 dryRun=true 就说明没有落盘，真正写入需要显式 dry_run=false + drain。\n"
+        )
+        payload = run_server.dispatch(
+            "memory", {"op": "propose", "record": record, "dry_run": True}
+        )
+        self.assertTrue(payload["ok"], payload)
+        self.assertTrue(payload["dryRun"])
+        self.assertIn("targetPath", payload)
 
 
 if __name__ == "__main__":

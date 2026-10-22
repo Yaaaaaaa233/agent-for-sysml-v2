@@ -14,7 +14,7 @@ SysML v2 建模智能体：**IR JSON（`sysml-ir/v1`）是唯一事实源** → 
 2. **没跑 = 没跑**：写"验证通过"前必须有证据文件；"未执行"≠"0 诊断"；第三方结论要带层级/构建/范围。
 3. **核心逻辑零第三方依赖**：新工具默认纯标准库；有可选依赖时必须能降级。
 4. **改 MCP 工具数/名单要同步 5 处**：`run_server.py` / `tests/test_server.py` / `README.md` /
-   `INSTRUCTIONS` / 插件 preset 提示词（当前 9 个）。
+   `INSTRUCTIONS` / 插件 preset 提示词（当前 10 个）。
 5. **改 DSH 插件后必须完全退出重启（Cmd+Q）**，再验 `/api/sysml-viz/health`；改文件不会热更新。
 6. **"模型准不准"按 L0–L5 分层回答**，不给整体背书。
 

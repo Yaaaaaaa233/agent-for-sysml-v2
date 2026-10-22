@@ -40,7 +40,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const PLUGIN_ID = 'dsh-sysml-viz'
-export const VERSION = '0.1.7'
+export const VERSION = '0.1.8'
 export const GRAPH_SCHEMA = 'sysml-graph/v1'
 export const IR_SCHEMA = 'sysml-ir/v1'
 export const HISTORY_SCHEMA = 'sysml-viz-history/v1'

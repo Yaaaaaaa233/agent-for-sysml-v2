@@ -253,6 +253,29 @@ class TestWritePath(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("E-CREATED-FUTURE", result.stdout)
 
+    def test_drain_flips_superseded_record(self):
+        """drain 要负责把被取代记录的 status/superseded_by 改掉（旧正文不动）。"""
+        candidate = self.temp_dir / "candidate-supersede.md"
+        text = _candidate(record_id="mem-20260101-9003").replace(
+            "confidence: low\n",
+            "confidence: low\nsupersedes: [mem-20261017-0004]\n",
+            1,
+        )
+        candidate.write_text(text, encoding="utf-8")
+        write = _run(["propose", "--from-file", str(candidate), "--write"], memory_root=self.memory_copy)
+        self.assertEqual(write.returncode, 0, write.stdout + write.stderr)
+        drain = _run(["drain"], memory_root=self.memory_copy)
+        self.assertEqual(drain.returncode, 0, drain.stdout + drain.stderr)
+        self.assertIn("FLIP", drain.stdout)
+        old = next((self.memory_copy / "records").rglob("mem-20261017-0004-*.md"))
+        old_text = old.read_text(encoding="utf-8")
+        self.assertIn("status: superseded", old_text)
+        self.assertIn("superseded_by: mem-20260101-9003", old_text)
+        # 正文没有被改写
+        self.assertIn("## 用法", old_text)
+        validate = _run(["validate"], memory_root=self.memory_copy)
+        self.assertEqual(validate.returncode, 0, validate.stdout + validate.stderr)
+
     def test_near_duplicate_rejected(self):
         existing = next((MEMORY_ROOT / "records").rglob("mem-20261019-0003-*.md"))
         text = existing.read_text(encoding="utf-8")
