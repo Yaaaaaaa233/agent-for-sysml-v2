@@ -12,7 +12,7 @@ confidence: high
 review_after: 2027-04-20
 evidence:
   - file:docs/verification/msosa/runs/2026-10-20-validate/validation-results.md
-  - external:docs/verification/msosa/runs/2026-10-20-import/BLOCKER.md（未入库，入库后改回 file:）
+  - file:docs/verification/msosa/runs/2026-10-20-import/BLOCKER.md
 check:
   - contains:docs/verification/msosa/runs/2026-10-20-validate/validation-results.md::0 诊断
 ---

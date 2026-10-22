@@ -11,7 +11,7 @@ aliases: [华望, Magic SoSA, MagicDraw, CATIA Magic, 独立实现]
 confidence: high
 review_after: 2027-04-20
 evidence:
-  - external:docs/verification/msosa/runs/2026-10-20-import/BLOCKER.md（未入库，入库后改回 file:）
+  - file:docs/verification/msosa/runs/2026-10-20-import/BLOCKER.md
   - file:docs/verification/msosa/README.md
   - external:智能体/Magic Systems of Systems Architect UserManual.pdf
 check:

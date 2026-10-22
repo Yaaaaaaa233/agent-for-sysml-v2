@@ -13,7 +13,7 @@ review_after: 2026-11-22
 evidence:
   - commit:f4c2750
   - commit:3b19899
-  - external:docs/verification/msosa/handoff/README.md（未入库，入库后改回 file:）
+  - file:docs/verification/msosa/handoff/README.md
 check:
   - path_exists:integrations/dsh-sysml-viz/smoke-test.mjs
 ---

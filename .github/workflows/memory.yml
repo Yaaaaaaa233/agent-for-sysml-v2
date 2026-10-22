@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: 结构 / 引用 / 生命周期
-        run: python memory/tools/memory.py --root . validate
+        run: python memory/tools/memory.py --root . validate --strict-tracked
       - name: 检索回归（held-out MRR）
         run: python memory/tools/memory.py --root . eval --threshold 0.8
 
@@ -52,7 +52,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: 防陈腐断言 + evidence 核验
-        run: python memory/tools/memory.py --root . check --git
+        run: python memory/tools/memory.py --root . check --git --strict-tracked
 
   rot-report:
     name: 周度复核
