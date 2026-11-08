@@ -1,4 +1,6 @@
 # SysML v2 建模模式 preset（Q2）
+# 兼容基线：DSH 0.2.2-rc.1（桌面端 2026-11-04 更新版）。行清单与 0.2.2 内置
+# dsh-web-app/presets/standard.patch.yml 对齐，另加 mcp-sysml-agent 一行。
 # 用法：把本文件放进插件 bundle，作为 dsh.bundle.patch 的第二个 patch；
 # 或把下面整段 insert 追加到 profile 的 cordis.patch.yml（不推荐手改，优先 plugin_manager）。
 - insert:
@@ -34,6 +36,9 @@
             disabled: !!js process.platform !== 'win32'
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              # 与 0.2.2 内置 standard preset 对齐：不在 edit 旁边再挂 apply_patch
+              applyPatch: false
           - id: tool-fs-search
             name: '@deepseek-ai/dsh-tool-fs-search'
             config:
@@ -94,16 +99,20 @@
             isolate:
               workflowEngine: true
             config:
+              # 2026-11-08 适配 DSH 0.2.2-rc.1：list_agents 工具已并入
+              # @deepseek-ai/dsh-tool-subagent-control 主入口；旧版单独导出的
+              # .../list-agents 子路径已删除，保留该行会让整个 preset 变 broken
+              # （症状：preset 里没有 mcp__sysml-agent__* 工具）。
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
-              - id: tool-subagent-list-agents
-                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
-                  modelSelectionSettings: true
+                  # 0.2.2 配置键：modelSelectionSettings → modelSelection + modelDiscovery
+                  modelSelection: true
+                  modelDiscovery: true
               - id: tool-subagent-fork
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:

@@ -232,8 +232,9 @@ failOnStartupError: true   # 连接失败时让 preset 显式 broken，而不是
 
 - **真机状态（v0.1.7）**：已在本机桌面端安装（profile `desktop`，symlink 到本目录），v0.1.1–v0.1.7
   已在真机跑通（工作区定位、与文件 tab 共存、MCP 工具按 preset 出现、画布缩放/平移、悬停联动、
-  文字适配与边标签避让）；
-  **host/client 改动需重启 DSH 才生效**（host 半边是进程内模块，不会热替换）。
+  文字适配与边标签避让）；**v0.1.10 适配 DSH 0.2.2-rc.1**（preset 删除已并入主入口的
+  `tool-subagent-control/list-agents` 行、`modelSelectionSettings` 改 `modelSelection`+`modelDiscovery`）；
+  **host/client/preset 改动需重启 DSH 才生效**（host 半边是进程内模块，不会热替换）。
 - 过程记录是拉取式的：没有模型视图 tab 在轮询时不落步骤；会话归属来自 tab 的 `?sessionId=`，
   精确不到对话轮次。
 - 图布局是 host 侧简化确定性布局（`graph.py` 只做投影、不做布局）；大模型可能拥挤，需缩放/平移。

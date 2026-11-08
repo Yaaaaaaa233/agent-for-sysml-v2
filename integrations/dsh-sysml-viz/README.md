@@ -103,7 +103,12 @@ node smoke-test.mjs    # 39 项：5 条路由 / 图 / 过程记录 / 全过程�
   v0.1.4 新增过程记录与全过程图；v0.1.5 收口入口（header 仅 SysML、不播种 files）、
   画布滚轮缩放/拖拽平移、图节点悬停联动左树；v0.1.6 修画布尺寸测量与平移边界、
   悬停展开后恢复折叠；v0.1.7 修节点文字溢出（换行宽度、像素截断、标题缩字号、节点裁剪、
-  边标签避让）。**host/client 改动都要重启 DSH 才生效**。
+  边标签避让）。v0.1.8/v0.1.9 为过程面板与入口细节修订；**v0.1.10 适配 DSH 0.2.2-rc.1**：
+  preset 删除已并入主入口的 `tool-subagent-control/list-agents` 行（保留会让整个 preset 变
+  broken，症状是会话里没有 `mcp__sysml-agent__*` 工具），`tool-subagent` 配置键
+  `modelSelectionSettings` 改为 `modelSelection` + `modelDiscovery`，并与 0.2.2 内置
+  standard preset 对齐（`tool-fs` 加 `applyPatch: false`）。
+  **host/client/preset 改动都要重启 DSH 才生效**。
 - 过程记录只在**有人打开模型视图 tab**时随 `/model` 请求写入：没有 tab 在轮询时，模型变化不会
   自动落历史（下一次打开时只会记当时状态为一步）。这是「只读、无后台常驻进程」的取舍。
 - 会话归属是启发式：host 只能拿到 tab 请求的 `?sessionId=`，无法知道是"哪一轮对话"；跨会话的

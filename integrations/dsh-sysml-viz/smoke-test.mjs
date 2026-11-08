@@ -727,7 +727,17 @@ check('节点文字换行：按真实字号与全角箭头估宽，描述行不�
   }
   assert(Math.abs(math.textWidth('→', 10.5) - 10.5) < 0.01, '箭头未按全角估宽')
   assert(hostSource.includes('const DEF_WIDTH = 190') && hostSource.includes('DEF_WIDTH - NODE_PADDING'), '结构节点宽度与换行宽度未同源')
-  return `${lines.length} 行，最大 ${Math.max(...lines.map((line) => math.textWidth(line, 10.5))).toFixed(1)}px / ${maxPx}px`
+  const expr = 'enduranceEstimateH = nominalBatteryEnergyWh * usableEnergyFraction / cruiseAveragePowerW'
+  const exprLines = math.wrapText(expr, 320 - 24, 10.5)
+  assert(exprLines.join('') === expr, '公式换行后文本不连续')
+  assert(exprLines.length <= 2, `公式被切成 ${exprLines.length} 行，未在运算符/空格处换行`)
+  for (const line of exprLines.slice(0, -1)) {
+    assert(/[ =*/+-]$/.test(line), `公式在标识符中间断开：${JSON.stringify(line)}`)
+  }
+  assert(hostSource.includes('function actionPortText') && hostSource.includes('record.typeRef'), '活动端口未按对象字段读取')
+  assert(!hostSource.includes("input?.[0] ?? '?'"), '仍保留把端口当元组取值的旧逻辑')
+  assert(hostSource.includes('ownerNote') && hostSource.includes("packageName || 'Model'"), '参数视图标题未按 package 与 owner 统计生成')
+  return `${lines.length} 行，最大 ${Math.max(...lines.map((line) => math.textWidth(line, 10.5))).toFixed(1)}px / ${maxPx}px；公式 ${exprLines.length} 行`
 })
 
 check('节点文字截断：按像素宽度截断并加省略号，不越出节点内宽', () => {
@@ -754,14 +764,23 @@ check('client.js 节点文字裁剪 + 标题缩字号 + 边标签避让装配', 
     'fitText(raw, maxPx, renderFont)',
     'Math.max(10.5, baseFont * maxPx / needed * 0.995)',
     'edgeLabelBox',
-    'showLabels',
+    'edgeLabelCandidates',
+    'inflateRect',
+    'chooseEdgeLabelPlacement',
+    'leaderIsClear',
+    'renderEdgeLabel',
+    'svz-eleader',
   ]) {
     assert(clientSource.includes(marker), `缺少 ${marker}`)
   }
-  assert(/showLabels\[index\] = !hitsNode && !hitsLabel/.test(clientSource), '边标签缺少避让/去重')
+  assert(clientSource.includes('hitNode = (box) => nodes.some'), '边标签缺少节点避让')
+  assert(clientSource.includes('hitLabel = (box) => placed.some'), '边标签缺少标签间避让')
+  assert(clientSource.includes("h('title', { key: 'tip' }, tooltip || label)"), '关系说明未进入悬停详情')
+  assert(clientSource.includes('leaderIsClear(box, anchor, nodes)'), '偏离连线的标签缺少引导线避障')
+  assert(clientSource.includes("if (hitNode(box) || hitLabel(box)) continue"), '找不到位置时仍可能压住节点')
   assert(!clientSource.includes('LOD_SCALE'), '不应再保留缩放分级逻辑')
   assert(!clientSource.includes('fullDetail'), '不应再保留「全量」开关状态')
-  return 'clip + fitText + title shrink + label collision wired'
+  return 'clip + fitText + title shrink + prioritized label placement'
 })
 
 check('client.js 不引用 http(s) 外链', () => {

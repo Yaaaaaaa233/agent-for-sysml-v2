@@ -40,7 +40,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const PLUGIN_ID = 'dsh-sysml-viz'
-export const VERSION = '0.1.8'
+export const VERSION = '0.1.10'
 export const GRAPH_SCHEMA = 'sysml-graph/v1'
 export const IR_SCHEMA = 'sysml-ir/v1'
 export const HISTORY_SCHEMA = 'sysml-viz-history/v1'
@@ -489,19 +489,41 @@ function textWidth(text, fontSize) {
   return width
 }
 
+/**
+ * 按像素宽度换行，但优先在空格 / 运算符之后断开，避免把标识符劈成两半。
+ *
+ * 旧实现逐字符硬切（`nominalBatteryEn` / `ergyWh`），参数公式几乎不可读。
+ * 这里记录「最近可断点」：空格与独立运算符 `= * / + -` 之后可断；没有可断点时
+ * 才退回逐字符硬切。不裁剪任何字符——`lines.join('')` 必须与原文完全一致。
+ *
+ * @param {string} text - 原文。
+ * @param {number} maxPx - 行内可用宽度（像素）。
+ * @param {number} fontSize - 实际字号。
+ * @returns {string[]} 换行结果。
+ */
 function wrapText(text, maxPx, fontSize) {
+  const source = String(text ?? '')
   const lines = []
+  const limit = Math.max(16, Number(maxPx) || 16)
   let current = ''
   let width = 0
-  for (const char of String(text ?? '')) {
+  let breakAt = -1
+  for (const char of source) {
     const charWidth = CJK.test(char) ? fontSize : fontSize * LATIN_WIDTH_RATIO
-    if (width + charWidth > maxPx && current) {
-      lines.push(current)
-      current = ''
-      width = 0
+    if (current && width + charWidth > limit) {
+      const cut = breakAt > 0 ? breakAt : current.length
+      const head = current.slice(0, cut)
+      const tail = current.slice(cut)
+      if (head) lines.push(head)
+      current = tail
+      width = textWidth(current, fontSize)
+      breakAt = -1
     }
     current += char
     width += charWidth
+    if (char === ' ' || char === '=' || char === '*' || char === '/' || char === '+' || char === '-') {
+      breakAt = current.length
+    }
   }
   if (current) lines.push(current)
   return lines
@@ -526,7 +548,8 @@ const TEXT_PADDING = 12
 const NODE_PADDING = TEXT_PADDING * 2
 const DEF_WIDTH = 190
 const REQUIREMENT_WIDTH = 300
-const CONSTRAINT_WIDTH = 260
+const CONSTRAINT_WIDTH = 320
+const ACTION_WIDTH = 320
 const STATE_DEF_WIDTH = 320
 
 function measureLines(lines) {
@@ -665,14 +688,38 @@ function requirementLines(element) {
   return lines
 }
 
+/**
+ * 活动端口的一行文本。
+ *
+ * IR 里的端口是对象 `{ name, typeRef, unit }`（见 mcp-server/schema/sysml-ir-v1.json），
+ * 不是旧的 `[name, unit]` 元组；旧实现按元组取 `[0]/[1]`，导致界面出现 `in ?: ?`。
+ * 类型与单位分开表达：`name : Real  (s)`——括号里是单位，不冒充类型。
+ * 兼容数组形式时按 `[name, unit]` 处理（没有 typeRef 就不编造类型）。
+ *
+ * @param {object|Array} port - 端口对象或旧元组。
+ * @returns {string} 端口文本。
+ */
+function actionPortText(port) {
+  if (Array.isArray(port)) {
+    const name = port[0] ?? '?'
+    const unit = port[1]
+    return unit ? `${name}  (${unit})` : String(name)
+  }
+  const record = port && typeof port === 'object' ? port : {}
+  const name = typeof record.name === 'string' && record.name ? record.name : '?'
+  const type = typeof record.typeRef === 'string' && record.typeRef ? record.typeRef : ''
+  const unit = typeof record.unit === 'string' && record.unit ? record.unit : ''
+  return `${name}${type ? ` : ${type}` : ''}${unit ? `  (${unit})` : ''}`
+}
+
 function actionLines(element) {
   const properties = element.properties ?? {}
   const lines = [ST('«action def»'), TTL(element.name ?? element.id), SUB(element.id)]
   for (const input of properties.inputs ?? []) {
-    lines.push(KV('in ', `${input?.[0] ?? '?'} : ${input?.[1] ?? '?'}`))
+    lines.push(KV('in', actionPortText(input)))
   }
   for (const output of properties.outputs ?? []) {
-    lines.push(KV('out', `${output?.[0] ?? '?'} : ${output?.[1] ?? '?'}`))
+    lines.push(KV('out', actionPortText(output)))
   }
   return lines
 }
@@ -1475,9 +1522,10 @@ function buildStateViews(elements) {
 /**
  * 参数视图：Attribute 卡片 + Constraint 卡片 + parameters 连线。
  * @param {Array<object>} elements - IR 元素。
+ * @param {string} [packageName] - IR 的 package 名，用作容器标题的范围。
  * @returns {object|null} 视图。
  */
-function buildParamView(elements) {
+function buildParamView(elements, packageName) {
   const attributes = elements.filter((element) => element.kind === 'Attribute')
   const constraints = elements.filter((element) => element.kind === 'Constraint')
   if (attributes.length === 0 && constraints.length === 0) return null
@@ -1537,7 +1585,7 @@ function buildParamView(elements) {
       lines,
       x: constraintX,
       y: constraintY,
-      w: 300,
+      w: CONSTRAINT_WIDTH,
     })
     nodes.push(node)
     for (const parameter of constraint.properties?.parameters ?? []) {
@@ -1561,13 +1609,26 @@ function buildParamView(elements) {
   const bounds = boundsOf(nodes, [])
   const width = Math.max(bounds.maxX + 50, 660)
   const height = Math.max(bounds.maxY + 60, 520)
+  // 容器标题要反映整个参数视图的范围。旧实现拿第一个属性的 owner 当标题，
+  // 于是 4 个参数（分属 BatteryPack / PowerChain）被写成全部属于 PART-BATTERY-PACK。
+  // 这里用 IR package 作为范围，并列出实际 owner 计数，避免「全部参数都属于电池」的误读。
+  const nameById = new Map(elements.map((element) => [element.id, element.name ?? element.id]))
+  const ownerCounts = new Map()
+  for (const element of [...attributes, ...constraints]) {
+    const owner = typeof element.owner === 'string' && element.owner ? element.owner : ''
+    if (!owner) continue
+    ownerCounts.set(owner, (ownerCounts.get(owner) ?? 0) + 1)
+  }
+  const ownerNote = ownerCounts.size > 0
+    ? `（${[...ownerCounts.entries()].map(([owner, count]) => `${nameById.get(owner) ?? owner} ${count}`).join(' / ')}）`
+    : ''
   const groups = [{
     id: 'g-param',
     x: 16,
     y: 16,
     w: width - 32,
     h: height - 32,
-    label: `«package» ${attributes[0]?.owner || 'parameters'} · ${attributes.length} 个属性 · ${constraints.length} 个约束`,
+    label: `«package» ${packageName || 'Model'} · ${attributes.length} 个属性 · ${constraints.length} 个约束${ownerNote}`,
   }]
   return {
     viewId: 'param',
@@ -1750,9 +1811,9 @@ export function buildFallbackGraph(ir) {
   const requirement = buildRequirementView(elements, byId)
   if (requirement) views.push(requirement)
   for (const state of buildStateViews(elements)) views.push(state)
-  const param = buildParamView(elements)
-  if (param) views.push(param)
   const packageName = typeof ir.package === 'string' && ir.package ? ir.package : 'Model'
+  const param = buildParamView(elements, packageName)
+  if (param) views.push(param)
   const tree = buildTree(packageName, elements, views)
   const stats = {
     elements: elements.length,
@@ -2105,7 +2166,7 @@ function autoLayout(kind, nodes, edges) {
 /* ---- graph.py 投影（sysml-graph/v1，只做投影不做布局）→ 可渲染视图 ---- */
 
 const PROJECTED_WIDTH = {
-  block: DEF_WIDTH, usage: 170, requirement: REQUIREMENT_WIDTH, action: 230, state: 142,
+  block: DEF_WIDTH, usage: 170, requirement: REQUIREMENT_WIDTH, action: ACTION_WIDTH, state: 142,
   note: 280, trace: 210, attr: 210, constraint: CONSTRAINT_WIDTH,
 }
 
@@ -2422,7 +2483,7 @@ function layoutIbdProjection(nodes, mappedEdges, rawView) {
   if (display.length === 0) return null
   const ids = new Set(display.map((node) => node.id))
   const edges = mappedEdges.filter((edge) => ids.has(edge.from) && ids.has(edge.to))
-  const size = layoutLayered(display, edges, { nodeWidth: 184, nodeHeight: 78, columnGap: 62, rowGap: 42 })
+  const size = layoutLayered(display, edges, { nodeWidth: 184, nodeHeight: 78, columnGap: 78, rowGap: 42 })
   const frameLabel = definitions.length > 0
     ? `«part» ${definitions[0].label}`
     : `«package» ${rawView?.scope ?? ''}`
@@ -2514,7 +2575,9 @@ function layoutRequirementProjection(nodes, mappedEdges) {
   let providerY = 58
   const providerMap = new Map()
   for (const provider of providerNodes) {
-    provider.w = provider.kind === 'note' ? STATE_DEF_WIDTH : Math.min(240, provider.w || 210)
+    provider.w = provider.kind === 'note'
+      ? STATE_DEF_WIDTH
+      : Math.min(provider.kind === 'action' ? ACTION_WIDTH : 240, provider.w || 210)
     provider.x = providerX
     provider.y = providerY
     providerY += provider.h + 18
@@ -3912,6 +3975,7 @@ function registerRoutes(ctx, context) {
       }
       const query = queryOf(req)
       const explicitPath = query.get('path') || undefined
+      const previewOnly = query.get('preview') === '1'
       const workspaceInfo = await workspaceContextForQuery(query).catch(() => ({
         extraRoots: [], sessionId: null, sessionWorkspace: null,
       }))
@@ -3920,6 +3984,8 @@ function registerRoutes(ctx, context) {
         model = await loadModel(context, explicitPath, {
           extraRoots: workspaceInfo.extraRoots,
           sessionId: workspaceInfo.sessionId,
+          // 历史快照只读预览：不归档，避免看一次旧状态就向 history 追加一步。
+          archive: !previewOnly,
         })
       } catch (error) {
         model = errorPayload('INTERNAL_ERROR', String(error?.message ?? error))
@@ -3941,7 +4007,7 @@ function registerRoutes(ctx, context) {
         sendJson(res, 200, model)
         return
       }
-      const presented = withRuntime(model, context.cfg)
+      const presented = { ...withRuntime(model, context.cfg), preview: previewOnly }
       const knownRevision = query.get('rev')
       if (knownRevision && knownRevision === presented.modelRef.revision) {
         const delta = {

@@ -105,7 +105,13 @@ window.__ModuleLoader__.load({
       'kinds.action': '动作',
       'legend.node': '元素',
       'legend.trace': '追溯',
+      'legend.verify': '验证',
       'legend.flow': '连接',
+      'legend.electrical': '电气',
+      'legend.mechanical': '机械',
+      'legend.comp': '组合',
+      'legend.param': '参数',
+      'legend.dep': '依赖',
       'legend.state': '迁移',
       'legend.session': '本会话新增',
       'process.tab': '过程',
@@ -132,6 +138,12 @@ window.__ModuleLoader__.load({
       'process.image.empty': '点「生成过程图」按步骤着色画一张全过程图（同时写入 <workspace>/.sysml-viz/history/timeline.svg）。',
       'process.image.loading': '正在生成过程图…',
       'process.image.failed': '生成失败：{error}',
+      'process.image.zoom': '看大图',
+      'process.image.fit': '适应面板',
+      'process.preview.tip': '点击查看该步的历史快照（只读；不改当前模型、不新增历史）',
+      'preview.badge': '历史状态预览 · 第 {n} 步',
+      'preview.exit': '返回当前模型',
+      'preview.status': '只读快照：{elements} 元素 / {relations} 关系；不改当前模型、不写历史记录。',
       'process.session.added': '本会话 +{n}',
       'process.session.tip': '本会话新增/修改的元素会一直用绿色描边标出（不依赖 20 秒的闪现）。',
       'process.history.error': '读取过程记录失败：{error}',
@@ -182,7 +194,13 @@ window.__ModuleLoader__.load({
       'kinds.action': 'Action',
       'legend.node': 'Element',
       'legend.trace': 'Trace',
+      'legend.verify': 'Verify',
       'legend.flow': 'Flow',
+      'legend.electrical': 'Electrical',
+      'legend.mechanical': 'Mechanical',
+      'legend.comp': 'Composition',
+      'legend.param': 'Parameter',
+      'legend.dep': 'Dependency',
       'legend.state': 'Transition',
       'legend.session': 'Added this session',
       'process.tab': 'Process',
@@ -209,6 +227,12 @@ window.__ModuleLoader__.load({
       'process.image.empty': 'Click “Generate process diagram” to render a step-colored SVG (also written to <workspace>/.sysml-viz/history/timeline.svg).',
       'process.image.loading': 'Generating process diagram…',
       'process.image.failed': 'Generation failed: {error}',
+      'process.image.zoom': 'Actual size',
+      'process.image.fit': 'Fit panel',
+      'process.preview.tip': 'Click to preview this step’s snapshot (read-only; does not touch the current model or history)',
+      'preview.badge': 'History preview · step {n}',
+      'preview.exit': 'Back to current model',
+      'preview.status': 'Read-only snapshot: {elements} elements / {relations} relations; the current model and history are not modified.',
       'process.session.added': 'This session +{n}',
       'process.session.tip': 'Elements added/changed by this session keep a green outline instead of a 20s flash.',
       'process.history.error': 'Failed to read process record: {error}',
@@ -246,7 +270,8 @@ window.__ModuleLoader__.load({
 .svz-title{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;white-space:nowrap}
 .svz-title .svz-logo{width:15px;height:15px;border-radius:4px;display:grid;place-items:center;background:linear-gradient(145deg,#2c6bff,#7c5cff);color:#fff;font-size:9px;flex:none}
 .svz-badge{display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 6px;border-radius:4px;border:1px solid var(--svz-border);background:var(--svz-layer2);color:var(--svz-label2);font-size:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:nowrap}
-.svz-badge.rev{color:#8fb6ff}
+.svz-badge.rev{color:var(--svz-label2)}
+.svz-badge.preview{color:var(--svz-label);border-color:rgba(76,141,255,.55);background:rgba(76,141,255,.14)}
 .svz-badge.new{color:#79c98f;border-color:rgba(63,185,80,.35)}
 .svz-status{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--svz-label3);white-space:nowrap}
 .svz-dot{width:6px;height:6px;border-radius:50%;background:#3fb950;flex:none}
@@ -256,7 +281,7 @@ window.__ModuleLoader__.load({
 .svz-spacer{flex:1 1 auto;min-width:4px}
 .svz-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:23px;min-width:23px;padding:0 7px;border-radius:5px;border:1px solid var(--svz-border);background:var(--svz-layer2);color:var(--svz-label2);font-size:11px;cursor:pointer;white-space:nowrap}
 .svz-btn:hover{color:var(--svz-label);background:var(--svz-hover)}
-.svz-btn.on{color:#cfe0ff;border-color:rgba(76,141,255,.5);background:rgba(76,141,255,.14)}
+.svz-btn.on{color:var(--svz-label);border-color:rgba(76,141,255,.6);background:rgba(76,141,255,.16)}
 .svz-main{flex:1 1 auto;display:flex;min-height:0;min-width:0;position:relative}
 .svz-tree{flex:none;width:212px;min-width:180px;max-width:290px;overflow:auto;border-right:1px solid var(--svz-border);padding:5px 3px 16px;background:var(--svz-layer1)}
 .svz-treehead{display:flex;gap:4px;align-items:center;padding:2px 5px 7px}
@@ -265,19 +290,19 @@ window.__ModuleLoader__.load({
 .svz-tab-btn.on{background:var(--svz-hover);color:var(--svz-label);border-color:var(--svz-border)}
 .svz-tnode{display:flex;align-items:center;gap:4px;padding:2.5px 5px;border-radius:5px;cursor:pointer;white-space:nowrap;overflow:hidden;font-size:11.5px;color:var(--svz-label2)}
 .svz-tnode:hover{background:var(--svz-hover);color:var(--svz-label)}
-.svz-tnode.hov{background:rgba(76,141,255,.13);color:#d7e6ff;box-shadow:inset 2px 0 0 #4c8dff}
-.svz-tnode.sel{background:rgba(76,141,255,.16);color:#cfe0ff}
+.svz-tnode.hov{background:rgba(76,141,255,.14);color:var(--svz-label);box-shadow:inset 2px 0 0 #4c8dff}
+.svz-tnode.sel{background:rgba(76,141,255,.18);color:var(--svz-label);font-weight:600;box-shadow:inset 2px 0 0 #4c8dff}
 .svz-tnode .svz-caret{width:10px;flex:none;text-align:center;color:var(--svz-label3);font-size:9px}
-.svz-tnode .svz-ico{width:13px;flex:none;text-align:center;color:#8fb6ff;font-size:10px}
-.svz-tnode.view .svz-ico{color:#c9b8ff}
+.svz-tnode .svz-ico{width:13px;flex:none;text-align:center;color:#4c8dff;font-size:10px}
+.svz-tnode.view .svz-ico{color:#8f7cf0}
 .svz-tnode .svz-lbl{overflow:hidden;text-overflow:ellipsis}
 .svz-tnode .svz-cnt{margin-left:auto;color:var(--svz-label3);font-size:9px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;padding-left:4px}
-.svz-canvas-col{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;min-height:0}
+.svz-canvas-col{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;min-height:0;container-type:inline-size}
 .svz-viewbar{flex:none;display:flex;align-items:center;gap:5px;padding:5px 7px;border-bottom:1px solid var(--svz-border);overflow:hidden}
 .svz-viewchips{flex:1 1 auto;display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:thin}
 .svz-viewchip{flex:none;display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:11px;border:1px solid var(--svz-border);background:transparent;color:var(--svz-label2);font-size:10.5px;cursor:pointer;white-space:nowrap}
 .svz-viewchip:hover{color:var(--svz-label);border-color:var(--svz-label3)}
-.svz-viewchip.on{color:#cfe0ff;border-color:rgba(76,141,255,.55);background:rgba(76,141,255,.14)}
+.svz-viewchip.on{color:var(--svz-label);border-color:rgba(76,141,255,.7);background:rgba(76,141,255,.16);font-weight:600}
 .svz-viewchip .svz-kdot{width:5px;height:5px;border-radius:50%;flex:none}
 .svz-zoombar{margin-left:auto;display:flex;align-items:center;gap:3px;flex:none}
 .svz-zoomval{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;color:var(--svz-label3);min-width:34px;text-align:center}
@@ -319,7 +344,7 @@ window.__ModuleLoader__.load({
 .svz-node.svz-k-attr .svz-nbg{stroke:#3f4a57}
 .svz-node.svz-k-trace .svz-nbg{fill:var(--svz-layer2,#20242b);stroke:#3a4450}
 .svz-node.svz-k-init .svz-nbg{fill:#3fb950;stroke:#9fe8b0}
-.svz-l-st{font-size:10.5px;font-style:italic;fill:#8fb6ff}
+.svz-l-st{font-size:10.5px;font-style:italic;fill:#4c8dff}
 .svz-k-requirement .svz-l-st{fill:#79c98f}
 .svz-k-constraint .svz-l-st{fill:#e0b155}
 .svz-k-state .svz-l-st{fill:#a8a2ff}
@@ -350,11 +375,12 @@ window.__ModuleLoader__.load({
 .svz-arrow-flow-mech{fill:#d29922}
 .svz-arrow-trans{fill:#8b95a1}
 .svz-arrow-link{fill:#8f7cf0}
-.svz-elabel{font-size:10px;fill:var(--svz-label2,#a4adba);paint-order:stroke;stroke:var(--dsw-alias-bg-base,#14161a);stroke-width:3px;stroke-linejoin:round}
-.svz-elabel-flow-el{fill:#8fb6ff}
-.svz-elabel-flow-mech{fill:#e0b155}
-.svz-elabel-trace{fill:#7fd18f}
-.svz-elabel-verify{fill:#8fb6ff}
+.svz-elabel{font-size:10px;fill:var(--svz-label);paint-order:stroke;stroke:var(--dsw-alias-bg-base,#14161a);stroke-width:3px;stroke-linejoin:round}
+.svz-elabel-flow-el{fill:var(--svz-label)}
+.svz-elabel-flow-mech{fill:var(--svz-label)}
+.svz-elabel-trace{fill:var(--svz-label)}
+.svz-elabel-verify{fill:var(--svz-label)}
+.svz-eleader{stroke:var(--svz-label3,#8a93a0);stroke-width:1;stroke-dasharray:3 3;opacity:.75;pointer-events:none}
 .svz-esub{font-size:9px;fill:var(--svz-label3,#8a93a0);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;paint-order:stroke;stroke:var(--dsw-alias-bg-base,#14161a);stroke-width:3px}
 /* --------- 过程（建模全过程） --------- */
 .svz-badge.session{color:#79c98f;border-color:rgba(63,185,80,.45);background:rgba(63,185,80,.12);cursor:pointer}
@@ -372,20 +398,34 @@ window.__ModuleLoader__.load({
 .svz-step{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-top:1px solid var(--svz-border);font-size:11px}
 .svz-step:first-child{border-top:none}
 .svz-step.this{background:rgba(63,185,80,.06)}
+.svz-step.clickable{cursor:pointer}
+.svz-step.clickable:hover{background:var(--svz-hover)}
+.svz-step.preview{background:rgba(76,141,255,.14);box-shadow:inset 2px 0 0 #4c8dff}
 .svz-swatch{width:12px;height:12px;border-radius:3px;flex:none;margin-top:2px}
 .svz-step-main{display:flex;flex-direction:column;gap:2px;min-width:0}
 .svz-step-head{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .svz-step-name{font-weight:600;color:var(--svz-label);white-space:nowrap}
 .svz-step-time{color:var(--svz-label3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;white-space:nowrap}
 .svz-chip{display:inline-flex;align-items:center;gap:3px;height:15px;padding:0 4px;border-radius:3px;font-size:9px;border:1px solid var(--svz-border);color:var(--svz-label3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
-.svz-chip.add{color:#79c98f;border-color:rgba(63,185,80,.3)}
-.svz-chip.chg{color:#e0b155;border-color:rgba(210,153,34,.3)}
-.svz-chip.del{color:#e07a7a;border-color:rgba(224,122,122,.3)}
-.svz-chip.sess{color:#8fb6ff;border-color:rgba(76,141,255,.3)}
-.svz-chip.now{color:#79c98f;border-color:rgba(63,185,80,.45);background:rgba(63,185,80,.1)}
+.svz-chip.add{color:var(--dsw-alias-state-success-label,#79c98f);border-color:rgba(63,185,80,.4)}
+.svz-chip.chg{color:var(--dsw-alias-state-warn-label,#e0b155);border-color:rgba(210,153,34,.4)}
+.svz-chip.del{color:var(--dsw-alias-state-error-label,#e07a7a);border-color:rgba(224,122,122,.4)}
+.svz-chip.sess{color:var(--svz-label2);border-color:rgba(76,141,255,.4)}
+.svz-chip.now{color:var(--dsw-alias-state-success-label,#79c98f);border-color:rgba(63,185,80,.5);background:rgba(63,185,80,.1)}
 .svz-step-names{color:var(--svz-label2);font-size:10px;word-break:break-word;line-height:1.5}
 .svz-proc-image{flex:1 1 auto;min-height:140px;border:1px solid var(--svz-border);border-radius:6px;background:#fff;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:4px}
-.svz-proc-image img{max-width:100%;height:auto;display:block}
+.svz-proc-image img{max-width:100%;height:auto;display:block;cursor:zoom-in}
+.svz-proc-image.zoomed{align-items:flex-start;justify-content:flex-start}
+.svz-proc-image.zoomed img{max-width:none;max-height:none;cursor:zoom-out}
+/* 宽面板（全屏模型视图）把步骤与过程图并排：步骤列表不再被 44% 高度裁掉最后一步，过程图也能放大。 */
+@container (min-width: 760px){
+  .svz-process{display:grid;grid-template-columns:minmax(340px,420px) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}
+  .svz-process > .svz-proc-toolbar{grid-column:1 / -1}
+  .svz-process > .svz-proc-meta{grid-column:1 / -1}
+  .svz-process > .svz-proc-steps{grid-column:1;grid-row:3;max-height:none;min-height:0}
+  .svz-process > .svz-proc-image{grid-column:2;grid-row:3;min-height:0}
+  .svz-process > .svz-proc-hint{grid-column:1 / -1}
+}
 .svz-node.svz-session .svz-nbg{stroke:#79c98f;stroke-width:1.8;stroke-dasharray:5 3}
 `
 
@@ -403,6 +443,17 @@ window.__ModuleLoader__.load({
 
     const LINE_H = { st: 13, ttl: 19, sub: 13, div: 10, bd: 14, kv: 13, val: 18, note: 13, chk: 15 }
     const EDGE_KINDS = ['comp', 'dep', 'trace', 'verify', 'flow-el', 'flow-mech', 'trans', 'link']
+    /** 图例只列当前视图实际出现的边类型，颜色与 .svz-ep-* 保持一致；文字标签另行标注关系名。 */
+    const EDGE_KIND_META = {
+      comp: { key: 'legend.comp', color: '#6b7686' },
+      dep: { key: 'legend.dep', color: '#7d8794' },
+      trace: { key: 'legend.trace', color: '#3fb950' },
+      verify: { key: 'legend.verify', color: '#4c8dff' },
+      'flow-el': { key: 'legend.electrical', color: '#4c8dff' },
+      'flow-mech': { key: 'legend.mechanical', color: '#d29922' },
+      trans: { key: 'legend.state', color: '#8b95a1' },
+      link: { key: 'legend.param', color: '#8f7cf0' },
+    }
     const VIEW_KIND_COLOR = {
       structure: '#5b9dff',
       ibd: '#d29922',
@@ -684,59 +735,233 @@ window.__ModuleLoader__.load({
       ])
     }
 
-    function edgeLabelBox(edge, nodeMap) {
+    /**
+     * 边标签矩形：只按关系类型（label）计算宽度。
+     *
+     * 旧实现把 rationale（sub）也算进盒宽，于是很长的说明把盒子撑到节点下面，
+     * 整条边的标签（连同 refines / satisfiedBy / verifies 这些关系类型）一起被隐藏。
+     * 现在说明文字改放到 <title> 悬停详情，类型标签单独参与避让。
+     */
+    function edgeLabelBox(edge, nodeMap, point) {
       const label = String(edge.label ?? '')
-      const sub = String(edge.sub ?? '')
-      if (!label && !sub) return null
+      if (!label) return null
       const geometry = edgeGeometry(edge, nodeMap)
       if (!geometry) return null
-      const width = Math.max(
-        Math.min(150, measuredTextWidth(label, 10)),
-        Math.min(170, measuredTextWidth(sub, 9)),
-      )
-      return {
-        x: geometry.labelAt.x - width / 2 - 4,
-        y: geometry.labelAt.y - (sub ? 16 : 14),
-        w: width + 8,
-        h: sub ? 28 : 16,
-      }
+      const anchor = point || geometry.labelAt
+      const width = Math.min(160, measuredTextWidth(label, 10))
+      return { x: anchor.x - width / 2, y: anchor.y - 7, w: width, h: 14 }
+    }
+
+    function inflateRect(rect, padding) {
+      return { x: rect.x - padding, y: rect.y - padding, w: rect.w + padding * 2, h: rect.h + padding * 2 }
     }
 
     function rectsOverlap(a, b) {
       return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
     }
 
-    function renderEdge(edge, nodeMap, showLabel) {
+    /** 沿折线找几个可放标签的位置；先中间，再上下/前后偏移。 */
+    function edgeLabelCandidates(edge, nodeMap) {
+      const label = String(edge.label ?? '')
+      if (!label) return []
+      const geometry = edgeGeometry(edge, nodeMap)
+      if (!geometry) return []
+      const width = Math.min(160, measuredTextWidth(label, 10))
+      const ratios = [0.5, 0.38, 0.62, 0.28, 0.72, 0.18, 0.82]
+      const offsets = [[0, 0], [0, -12], [0, 12], [0, -24], [0, 24]]
+      const candidates = []
+      const seen = new Set()
+      const add = (point, dx, dy) => {
+        const box = { x: point.x + dx - width / 2, y: point.y + dy - 7, w: width, h: 14 }
+        const key = `${Math.round(box.x)}:${Math.round(box.y)}`
+        if (seen.has(key)) return
+        seen.add(key)
+        candidates.push(box)
+      }
+      for (const ratio of ratios) {
+        const point = pointOnPolyline(geometry.points, ratio)
+        for (const [dx, dy] of offsets) add(point, dx, dy)
+        if (ratio === 0.5) {
+          add(point, -Math.round(width / 2 + 10), 0)
+          add(point, Math.round(width / 2 + 10), 0)
+        }
+      }
+      return candidates
+    }
+
+    /**
+     * 折线上离目标点最近的位置。用于给“被迫偏离连线”的标签画引导线。
+     */
+    function nearestPointOnPolyline(points, target) {
+      let best = null
+      for (let index = 1; index < points.length; index += 1) {
+        const a = points[index - 1]
+        const b = points[index]
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const lengthSq = dx * dx + dy * dy
+        let t = lengthSq === 0 ? 0 : ((target.x - a.x) * dx + (target.y - a.y) * dy) / lengthSq
+        t = Math.max(0, Math.min(1, t))
+        const point = { x: a.x + dx * t, y: a.y + dy * t }
+        const distance = Math.hypot(point.x - target.x, point.y - target.y)
+        if (!best || distance < best.distance) best = { ...point, distance }
+      }
+      return best
+    }
+
+    /** 线段是否穿过矩形（Liang–Barsky 裁剪）；用于避免引导线划过节点。 */
+    function segmentIntersectsRect(x1, y1, x2, y2, rect) {
+      const dx = x2 - x1
+      const dy = y2 - y1
+      let t0 = 0
+      let t1 = 1
+      const clip = (p, q) => {
+        if (Math.abs(p) < 1e-9) return q >= 0
+        const r = q / p
+        if (p < 0) {
+          if (r > t1) return false
+          if (r > t0) t0 = r
+        } else {
+          if (r < t0) return false
+          if (r < t1) t1 = r
+        }
+        return true
+      }
+      return clip(-dx, x1 - rect.x)
+        && clip(dx, rect.x + rect.w - x1)
+        && clip(-dy, y1 - rect.y)
+        && clip(dy, rect.y + rect.h - y1)
+        && t0 <= t1
+    }
+
+    /** 从标签盒中心指向连线锚点的引导线是否安全（不穿节点）。 */
+    function leaderIsClear(box, anchor, nodes) {
+      const cx = box.x + box.w / 2
+      const cy = box.y + box.h / 2
+      return !nodes.some((node) => segmentIntersectsRect(cx, cy, anchor.x, anchor.y, inflateRect(node, 2)))
+    }
+
+    /** 标签盒相对锚点的方向，返回连线从盒边出发的端点（避免线穿文字）。 */
+    function leaderStart(box, anchor) {
+      const cx = box.x + box.w / 2
+      const cy = box.y + box.h / 2
+      const dx = anchor.x - cx
+      const dy = anchor.y - cy
+      if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return { x: cx, y: cy }
+      const tx = dx === 0 ? Infinity : ((dx > 0 ? box.x + box.w : box.x) - cx) / dx
+      const ty = dy === 0 ? Infinity : ((dy > 0 ? box.y + box.h : box.y) - cy) / dy
+      const t = Math.min(Math.abs(tx), Math.abs(ty))
+      return { x: cx + dx * t, y: cy + dy * t }
+    }
+
+    /**
+     * 给一条边选择标签位置。
+     *
+     * 1) 先用沿线的候选点（标签基本压在线上）；
+     * 2) 都放不下时，在边中点周围做网格搜索，要求标签盒不碰节点/其它标签，
+     *    且引导线不穿节点（例如 OnlineInfoBoundary 右侧的窄空档）；
+     * 3) 仍找不到时，退到节点包围盒外的空白边距，绝不把标签压在节点正文上。
+     * 4) 偏离连线超过 20px 时返回 leader，由渲染层画一条短虚线。
+     *
+     * @returns {{box:object, anchor:object, leader:boolean}|null}
+     */
+    function chooseEdgeLabelPlacement(edge, nodeMap, nodes, placed) {
+      const candidates = edgeLabelCandidates(edge, nodeMap)
+      if (candidates.length === 0) return null
       const geometry = edgeGeometry(edge, nodeMap)
       if (!geometry) return null
-      const label = showLabel ? String(edge.label ?? '') : ''
-      const sub = showLabel ? String(edge.sub ?? '') : ''
-      const labelY = geometry.labelAt.y - (sub ? 6 : 0)
-      return h('g', { key: edge.id, className: 'svz-edge' }, [
-        h('path', {
-          key: 'path',
-          className: `svz-ep svz-ep-${edge.kind}`,
-          d: roundedPath(geometry.points, 9),
-          markerEnd: `url(#svz-arrow-${edge.kind})`,
-        }),
-        label
-          ? h('text', {
-            key: 'label',
-            className: `svz-elabel svz-elabel-${edge.kind}`,
-            x: geometry.labelAt.x,
-            y: labelY,
-            textAnchor: 'middle',
-          }, fitText(label, 150, 10))
-          : null,
-        sub
-          ? h('text', {
-            key: 'sub',
-            className: 'svz-esub',
-            x: geometry.labelAt.x,
-            y: labelY + 12,
-            textAnchor: 'middle',
-          }, fitText(sub, 170, 9))
-          : null,
+      const hitNode = (box) => nodes.some((node) => rectsOverlap(inflateRect(box, 2), node))
+      const hitLabel = (box) => placed.some((other) => rectsOverlap(inflateRect(box, 3), other))
+      const make = (box, forceLeader = false) => {
+        const anchor = nearestPointOnPolyline(geometry.points, { x: box.x + box.w / 2, y: box.y + box.h / 2 })
+        const distance = Math.hypot(anchor.x - (box.x + box.w / 2), anchor.y - (box.y + box.h / 2))
+        return { box, anchor, leader: forceLeader || distance > 20 }
+      }
+      for (const box of candidates) {
+        if (hitNode(box) || hitLabel(box)) continue
+        return make(box)
+      }
+      const base = geometry.labelAt
+      const width = Math.min(160, measuredTextWidth(String(edge.label ?? ''), 10))
+      const steps = []
+      for (let dx = 0; dx <= 240; dx += 20) for (let dy = 0; dy <= 180; dy += 16) steps.push([dx, dy])
+      steps.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]))
+      for (const [dx, dy] of steps) {
+        for (const sx of dx === 0 ? [0] : [-1, 1]) {
+          for (const sy of dy === 0 ? [0] : [-1, 1]) {
+            const box = { x: base.x + dx * sx - width / 2, y: base.y + dy * sy - 7, w: width, h: 14 }
+            if (hitNode(box) || hitLabel(box)) continue
+            const anchor = nearestPointOnPolyline(geometry.points, { x: box.x + box.w / 2, y: box.y + box.h / 2 })
+            if (!leaderIsClear(box, anchor, nodes)) continue
+            return make(box, true)
+          }
+        }
+      }
+      // 最后兜底：放在整张图的上/下空白边距，仍要求引导线不穿节点。
+      const bounds = nodes.reduce((acc, node) => ({
+        minX: Math.min(acc.minX, node.x),
+        minY: Math.min(acc.minY, node.y),
+        maxX: Math.max(acc.maxX, node.x + node.w),
+        maxY: Math.max(acc.maxY, node.y + node.h),
+      }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity })
+      const margins = [
+        { x: base.x, y: bounds.minY - 18 },
+        { x: base.x, y: bounds.maxY + 18 },
+      ]
+      for (const point of margins) {
+        const box = { x: point.x - width / 2, y: point.y - 7, w: width, h: 14 }
+        if (hitNode(box) || hitLabel(box)) continue
+        const anchor = nearestPointOnPolyline(geometry.points, { x: base.x, y: base.y })
+        if (leaderIsClear(box, anchor, nodes)) return make(box, true)
+      }
+      // 理论上不会走到这里；宁可放到边距也不压节点正文。
+      const fallback = { x: base.x - width / 2, y: bounds.minY - 18, w: width, h: 14 }
+      return { box: fallback, anchor: base, leader: true }
+    }
+
+    function renderEdgePath(edge, nodeMap) {
+      const geometry = edgeGeometry(edge, nodeMap)
+      if (!geometry) return null
+      const tooltip = [edge.label, edge.sub].filter((value) => typeof value === 'string' && value).join(' — ')
+      return h('path', {
+        key: `path-${edge.id}`,
+        className: `svz-ep svz-ep-${edge.kind}`,
+        d: roundedPath(geometry.points, 9),
+        markerEnd: `url(#svz-arrow-${edge.kind})`,
+        'aria-label': tooltip || undefined,
+      }, tooltip ? [h('title', { key: 'tip' }, tooltip)] : null)
+    }
+
+    function renderEdgeLabel(edge, placement) {
+      const label = String(edge.label ?? '')
+      if (!label || !placement || !placement.box) return null
+      const box = placement.box
+      const tooltip = [edge.label, edge.sub].filter((value) => typeof value === 'string' && value).join(' — ')
+      const leader = placement.leader
+        ? (() => {
+          const start = leaderStart(box, placement.anchor)
+          return h('line', {
+            key: 'leader',
+            className: 'svz-eleader',
+            x1: start.x,
+            y1: start.y,
+            x2: placement.anchor.x,
+            y2: placement.anchor.y,
+          })
+        })()
+        : null
+      return h('g', { key: `label-${edge.id}` }, [
+        leader,
+        h('text', {
+          key: 'text',
+          className: `svz-elabel svz-elabel-${edge.kind}`,
+          x: box.x + box.w / 2,
+          y: box.y + 10,
+          textAnchor: 'middle',
+        }, [
+          h('title', { key: 'tip' }, tooltip || label),
+          fitText(label, 150, 10),
+        ]),
       ])
     }
 
@@ -840,24 +1065,22 @@ window.__ModuleLoader__.load({
           height: Math.max(0, node.h - 4),
           rx: node.kind === 'state' ? 12 : 7,
         })))
-      const showLabels = edges.map(() => true)
+      // 关系类型标签：沿边找不与节点/其它标签重叠的位置；找不到也保留在中点（类型不能一起消失）。
+      // rationale/description 不参与标签盒，已放进 <title> 悬停详情。
+      const placements = new Map()
       const placed = []
-      edges.forEach((edge, index) => {
-        const box = edgeLabelBox(edge, nodeMap)
-        if (!box) {
-          showLabels[index] = false
-          return
-        }
-        const hitsNode = nodes.some((node) => rectsOverlap(box, node))
-        const hitsLabel = placed.some((other) => rectsOverlap(box, other))
-        showLabels[index] = !hitsNode && !hitsLabel
-        if (showLabels[index]) placed.push(box)
-      })
+      for (const edge of edges) {
+        const placement = chooseEdgeLabelPlacement(edge, nodeMap, nodes, placed)
+        if (!placement) continue
+        placements.set(edge.id, placement)
+        placed.push(placement.box)
+      }
       const children = [
         h('defs', { key: 'defs' }, [...markers, ...clips]),
         ...groups.map((group) => renderGroup(group)),
-        ...edges.map((edge, index) => renderEdge(edge, nodeMap, showLabels[index])).filter(Boolean),
+        ...edges.map((edge) => renderEdgePath(edge, nodeMap)).filter(Boolean),
         ...nodes.map((node) => renderNode(node, selectedNodeId, addedElementIds, sessionAddedIds, hoveredNodeId, onSelect, onHover)),
+        ...edges.map((edge) => renderEdgeLabel(edge, placements.get(edge.id))).filter(Boolean),
       ]
       return h('svg', {
         className: 'svz-svg',
@@ -915,7 +1138,11 @@ window.__ModuleLoader__.load({
       const [historyTick, setHistoryTick] = useState(0)
       const [timeline, setTimeline] = useState(null)
       const [timelineBusy, setTimelineBusy] = useState(false)
+      const [previewStep, setPreviewStep] = useState(null)
+      const [imageZoom, setImageZoom] = useState(false)
       const revisionRef = useRef(null)
+      const previewRef = useRef(null)
+      const stepsRef = useRef(null)
       const rootRef = useRef(null)
       const canvasRef = useRef(null)
       const canvasObserverRef = useRef(null)
@@ -971,6 +1198,12 @@ window.__ModuleLoader__.load({
         let cancelled = false
         const run = async () => {
           if (cancelled) return
+          // 历史快照预览期间不轮询当前模型：否则 2s 后就被拉回最新状态，预览无法用于对比截图。
+          // 「返回当前模型」会把 previewRef 清空并触发一次重新拉取。
+          if (previewRef.current) {
+            timer = setTimeout(run, pollMs)
+            return
+          }
           try {
             if (typeof AbortController !== 'undefined') aborter = new AbortController()
             const revision = revisionRef.current
@@ -991,6 +1224,8 @@ window.__ModuleLoader__.load({
             if (cancelled) return
             const payload = await response.json()
             if (cancelled) return
+            // 预览请求发出后用户可能已点开历史快照：不要让在途的当前模型响应覆盖预览。
+            if (previewRef.current) return
             if (payload && payload.ok === true && payload.changed === false) {
               revisionRef.current = payload.revision || revisionRef.current
               setModel((previous) => (previous ? {
@@ -1068,6 +1303,55 @@ window.__ModuleLoader__.load({
           cancelled = true
         }
       }, [sessionId, model?.modelRef?.revision, historyTick, panel])
+
+      /**
+       * 历史快照只读预览：用 /model?path=<snapshot>&preview=1 读该步的完整 IR。
+       * host 在 preview=1 时不归档、不写历史；客户端暂停轮询，因此不会覆盖当前模型文件。
+       * 这是为「增量前后对照」和过程回看补的最小查看能力，不是建模动作。
+       */
+      const loadPreview = async (step) => {
+        const dir = String(history?.historyDir || '').replace(/\/+$/, '')
+        const snapshot = String(step?.snapshot || '')
+        if (!dir || !snapshot) return
+        const params = [`preview=1`, `path=${encodeURIComponent(`${dir}/${snapshot}`)}`]
+        if (sessionId) params.push(`sessionId=${encodeURIComponent(sessionId)}`)
+        try {
+          const response = await fetch(`${API_MODEL}?${params.join('&')}`, { cache: 'no-store' })
+          const payload = await response.json()
+          if (!payload || payload.ok !== true) {
+            setError(payload?.error ? payload : { code: 'PREVIEW_ERROR', message: dictText('error.network') })
+            return
+          }
+          previewRef.current = step
+          setPreviewStep(step)
+          revisionRef.current = null
+          setModel(payload)
+          setError(null)
+          setLoading(false)
+          setSelectedNodeId(null)
+          setPanel('graph')
+          const nextView = (payload.views || []).find((view) => view.viewId === 'requirements') || payload.views?.[0]
+          if (nextView) setViewId(nextView.viewId)
+        } catch (failure) {
+          setError({ code: 'PREVIEW_ERROR', message: String(failure?.message ?? failure) })
+        }
+      }
+
+      /** 退出历史预览：清空预览标记并强制重新拉取当前模型（不重启、不改文件）。 */
+      const exitPreview = () => {
+        previewRef.current = null
+        setPreviewStep(null)
+        revisionRef.current = null
+        setRefreshTick((value) => value + 1)
+      }
+
+      // 过程列表默认滚到最新一步：最后一步的增量在窄面板里也不再“看不见”。
+      useEffect(() => {
+        if (panel !== 'process') return
+        const element = stepsRef.current
+        if (!element) return
+        element.scrollTop = element.scrollHeight
+      }, [panel, history?.stepCount, previewStep?.seq])
 
       // 视图选中项回落
       const views = Array.isArray(model?.views) ? model.views : []
@@ -1589,7 +1873,14 @@ window.__ModuleLoader__.load({
           if (added.length > 0) chips.push(h('span', { key: 'add', className: 'svz-chip add' }, t('process.added', { n: added.length })))
           if (changed.length > 0) chips.push(h('span', { key: 'chg', className: 'svz-chip chg' }, t('process.changed', { n: changed.length })))
           if (removed.length > 0) chips.push(h('span', { key: 'del', className: 'svz-chip del' }, t('process.removed', { n: removed.length })))
-          return h('div', { key: `step-${step.seq}`, className: `svz-step${thisSession ? ' this' : ''}` }, [
+          const canPreview = Boolean(history?.historyDir && step.snapshot)
+          const isPreview = Boolean(previewStep && previewStep.seq === step.seq)
+          return h('div', {
+            key: `step-${step.seq}`,
+            className: `svz-step${thisSession ? ' this' : ''}${canPreview ? ' clickable' : ''}${isPreview ? ' preview' : ''}`,
+            title: canPreview ? t('process.preview.tip') : undefined,
+            onClick: canPreview ? () => loadPreview(step) : undefined,
+          }, [
             h('span', { key: 'sw', className: 'svz-swatch', style: { background: color } }),
             h('div', { key: 'main', className: 'svz-step-main' }, [
               h('div', { key: 'head', className: 'svz-step-head' }, [
@@ -1631,6 +1922,14 @@ window.__ModuleLoader__.load({
               },
             }, t('process.open'))
             : null,
+          timeline?.url
+            ? h('button', {
+              key: 'zoom',
+              className: 'svz-btn',
+              title: imageZoom ? t('process.image.fit') : t('process.image.zoom'),
+              onClick: () => setImageZoom((value) => !value),
+            }, imageZoom ? t('process.image.fit') : t('process.image.zoom'))
+            : null,
           h('button', { key: 'reset', className: 'svz-btn', onClick: resetHistory }, t('process.reset')),
         ])
         let listBody
@@ -1639,11 +1938,17 @@ window.__ModuleLoader__.load({
         } else if (!available) {
           listBody = h('div', { key: 'empty', className: 'svz-proc-hint' }, t('process.empty'))
         } else {
-          listBody = h('div', { key: 'steps', className: 'svz-proc-steps' }, stepRows)
+          listBody = h('div', { key: 'steps', className: 'svz-proc-steps', ref: stepsRef }, stepRows)
         }
         let imageBody
         if (timeline?.url) {
-          imageBody = h('img', { key: 'img', src: timeline.url, alt: t('process.title') })
+          imageBody = h('img', {
+            key: 'img',
+            src: timeline.url,
+            alt: t('process.title'),
+            title: imageZoom ? t('process.image.fit') : t('process.image.zoom'),
+            onClick: () => setImageZoom((value) => !value),
+          })
         } else if (timelineBusy) {
           imageBody = h('div', { key: 'loading', className: 'svz-proc-hint' }, t('process.image.loading'))
         } else if (timeline?.error) {
@@ -1655,7 +1960,7 @@ window.__ModuleLoader__.load({
           toolbar,
           h('div', { key: 'hint', className: 'svz-proc-meta' }, t('process.hint')),
           listBody,
-          h('div', { key: 'image', className: 'svz-proc-image' }, [imageBody]),
+          h('div', { key: 'image', className: `svz-proc-image${imageZoom ? ' zoomed' : ''}` }, [imageBody]),
         ])
       }
 
@@ -1737,6 +2042,16 @@ window.__ModuleLoader__.load({
             h('span', { key: 'age' }, t('status.age', { age: fmtAge(statusLine.age) })),
           ])
           : null,
+        previewStep
+          ? h('span', {
+            key: 'preview',
+            className: 'svz-badge preview',
+            title: t('preview.status', {
+              elements: model?.stats?.elements ?? '?',
+              relations: model?.stats?.relations ?? '?',
+            }),
+          }, t('preview.badge', { n: previewStep.seq }))
+          : null,
         diffFresh && diff
           ? h('span', {
             key: 'added',
@@ -1753,6 +2068,17 @@ window.__ModuleLoader__.load({
           }, t('process.session.added', { n: sessionAddedCount }))
           : null,
         h('span', { key: 'spacer', className: 'svz-spacer' }),
+        previewStep
+          ? h('button', {
+            key: 'exitPreview',
+            className: 'svz-btn',
+            title: t('preview.status', {
+              elements: model?.stats?.elements ?? '?',
+              relations: model?.stats?.relations ?? '?',
+            }),
+            onClick: exitPreview,
+          }, t('preview.exit'))
+          : null,
         h('button', {
           key: 'tree',
           className: `svz-btn${treeOpen ? ' on' : ''}`,
@@ -1920,12 +2246,16 @@ window.__ModuleLoader__.load({
               h('span', { key: 'poll' }, t('poll', { ms: pollMs })),
               h('span', { key: 'path', title: modelPath }, t('model.path', { path: truncate(baselineName || '?', 26) })),
               h('span', { key: 'legend', className: 'svz-legend' }, [
-                h('span', { key: 'node', className: 'svz-lg-node' }, [h('i', { key: 'i' }), t('legend.node')]),
-                h('span', { key: 'trace', className: 'svz-lg-trace' }, [h('i', { key: 'i' }), t('legend.trace')]),
-                h('span', { key: 'flow', className: 'svz-lg-flow' }, [h('i', { key: 'i' }), t('legend.flow')]),
-                h('span', { key: 'state', className: 'svz-lg-state' }, [h('i', { key: 'i' }), t('legend.state')]),
+                h('span', { key: 'node' }, [h('i', { key: 'i', style: { background: '#5b9dff' } }), t('legend.node')]),
+                ...[...new Set((activeView.edges || []).map((edge) => edge.kind))].map((kind) => {
+                  const meta = EDGE_KIND_META[kind] || { key: kind, color: '#7d8794' }
+                  return h('span', { key: `edge-${kind}`, title: kind }, [
+                    h('i', { key: 'i', style: { background: meta.color } }),
+                    t(meta.key),
+                  ])
+                }),
                 sessionAddedCount > 0
-                  ? h('span', { key: 'session', className: 'svz-lg-node' }, [h('i', { key: 'i', style: { background: '#79c98f' } }), t('legend.session')])
+                  ? h('span', { key: 'session' }, [h('i', { key: 'i', style: { background: '#79c98f' } }), t('legend.session')])
                   : null,
               ]),
             ]),
